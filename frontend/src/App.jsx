@@ -397,20 +397,20 @@ export default function CycloneTwinApp() {
     }
   };
 
-  // Guided Live Demo Next Step Controller
+  // Guided Live Demo Next Step Controller (6-Step Stepper)
   const handleNextDemoStep = () => {
-    if (systemState === "BASE") {
+    if (demoStep === 1) {
       handleApplyFlood();
-    } else if (systemState === "FLOODED") {
+    } else if (demoStep === 2) {
       handleRankCorridors();
-    } else if (systemState === "RANKED") {
-      setDemoStep(4); // Compare
+    } else if (demoStep === 3) {
+      setDemoStep(4); // 4. Compare Criticality
     } else if (demoStep === 4) {
-      setDemoStep(5); // Mitigation
-    } else if (demoStep === 5 || systemState === "SELECTED") {
-      handleClearCorridor();
-    } else if (systemState === "CLEARED") {
-      handleResetNetwork();
+      setDemoStep(5); // 5. Mitigation Priority
+    } else if (demoStep === 5) {
+      handleClearCorridor(); // 6. Show Recovery
+    } else if (demoStep === 6) {
+      handleResetNetwork(); // Reset to Base
     }
   };
 
