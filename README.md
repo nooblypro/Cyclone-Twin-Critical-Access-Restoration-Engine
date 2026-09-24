@@ -188,33 +188,73 @@ Open [http://localhost:5174](http://localhost:5174) in your browser.
 
 ---
 
-## 7. Interactive Demo Sequence
+## 7. Guided 6-Step Competition Demo Sequence
 
-1. **Intact Network (BASE)**: View functioning GCC arterial corridors, 6 emergency hospitals, and 10 residential ward centroids with 477,000 accessible citizens.
-2. **Apply Flood**: Click `1. APPLY MICHAUNG FLOOD`. The flood footprint is overlaid, intersecting surface roads are severed (while elevated bridge spans are preserved), isolating 179,000 citizens across 4 low-lying wards.
-3. **Rank Corridors**: Click `2. RANK RESTORATION`. The engine clusters disabled segments and computes deterministic scores.
-4. **Inspect Killer Demo**: Toggle `3. KILLER DEMO COMPARE` to witness the divergence between Corridor A (Low Criticality) and Corridor B (High Criticality).
-5. **Inspect Breakdown & Advisory**: Click Corridor B to view progress bars for $\Delta H, \Delta P, \Delta T, \Delta D$ and the concise operational dispatch directive.
-6. **Simulate Clearance**: Click `4. SIMULATE CLEARING`. The restored corridor lights up in luminous emerald on the map, restoring 89,000 citizens to the healthcare network.
-7. **Inspect Manifest**: Click `MANIFEST` in the top bar to inspect full audit provenance and CRS parameters.
+The application provides a guided stepper (`NEXT DEMO STEP`) designed for live judge evaluations:
+
+1. **STEP 1: SHOW NETWORK (BASE)**: View functioning GCC arterial corridors, 6 emergency trauma hospitals, and 10 residential ward centroids with 477,000 accessible citizens under normal conditions.
+2. **STEP 2: APPLY HAZARD**: Overlays the Cyclone Michaung flood polygon. Low-lying surface roads are severed while elevated bridge spans are preserved, isolating 179,000 citizens across 4 low-lying wards (Saidapet, Jafferkhanpet, Velachery, Madipakkam).
+3. **STEP 3: ASSESS VULNERABILITY**: Multi-source Dijkstra on $G^R$ clusters disabled road segments into 3 contiguous corridors and deterministically scores them.
+4. **STEP 4: COMPARE CRITICALITY (KILLER DEMO)**: Side-by-side comparison of Corridor A (Santhome Feeder, score $-0.050$, 0 pop recovered) vs Corridor B (Saidapet / Velachery Lifeline, score $+0.072$, 89,000 pop recovered) proving: *"The physical hazard is similar. The network vulnerability isn't."*
+5. **STEP 5: MITIGATION PRIORITY**: Inspects Rank #1 with a deterministic "Why This Matters" consequence statement and the active Life Safety formula breakdown ($0.40/0.30/0.20/0.10$).
+6. **STEP 6: SHOW RECOVERY**: Simulates clearing the priority lifeline. The corridor turns vibrant emerald, recovering 89,000 cut-off residents and reconnecting 2 wards.
+7. **RESET SCENARIO**: Restores the pristine 477,000-citizen baseline without browser reload.
 
 ---
 
 ## 8. Answers to Judge & Reviewer Questions
 
-**Q1: Why not use Machine Learning to predict road washouts?**  
-*A: Disaster operations demand explainable, auditable causality. Predicting flood depth or road failure requires uncertain hydrodynamic and structural data. Cyclone Twin starts with any verified hazard footprint (satellite SAR or municipal sensor) and deterministically forecasts network accessibility consequences.*
+**Q1: What exactly are you predicting?**  
+*A: We are not predicting the flood itself. We forecast emergency healthcare network consequences and accessibility loss under a supplied flood scenario.*
 
-**Q2: How does the system handle parallel bridges over flooded causeways?**  
+**Q2: Where does the flood data come from?**  
+*A: Satellite-derived flood inundation extents (NRSC / ISRO Disaster Management Support) or verified municipal water-logging polygons.*
+
+**Q3: Why not use Machine Learning to predict road washouts?**  
+*A: Disaster operations demand explainable, auditable causality. Predicting flood depth or road failure requires uncertain hydrodynamic and structural data. Cyclone Twin starts with any verified hazard footprint and deterministically forecasts network accessibility consequences.*
+
+**Q4: How does the system handle parallel bridges over flooded causeways?**  
 *A: The graph uses NetworkX `MultiDiGraph`. Parallel edges between nodes are evaluated via `_active_weight()`. If a surface road floods but a parallel elevated bridge exists (`bridge == 'yes'` or `layer > 0`), the bridge remains active, maintaining network connectivity.*
 
-**Q3: What happens if Gemini API is unreachable or rate-limited?**  
+**Q5: What happens if Gemini API is unreachable or rate-limited?**  
 *A: The system implements a guaranteed 3-tier fallback. Tier 2 uses deterministic rule-based templates calibrated to the metric breakdown, and Tier 3 provides a static emergency directive. The core ranking engine is 100% independent and unaffected by AI availability.*
 
 ---
 
-## 9. Limitations & Ethical Notice
+## 9. Technical Limitations & Operational Boundaries
 
 - **Decision-Support Only**: Cyclone Twin is an infrastructure prioritization tool and does not replace emergency commander situational awareness or field validation.
-- **Static Speeds**: Edge travel times assume free-flow speeds degraded by flood blockage; dynamic vehicular congestion is not modeled.
-- **Binary Clearance**: Corridors are currently evaluated as either submerged/impassable or operational.
+- **Static Free-Flow Speeds**: Edge travel times assume free-flow design speeds degraded by flood blockage; dynamic vehicular congestion is not modeled.
+- **Binary Passability**: Corridors are currently evaluated as either submerged/impassable or operational.
+- **No Real-Time Hydrology**: Does not compute rainfall runoff or hydrodynamics.
+- **No Live Sensor Stream**: Inputs are based on validated GIS layers and satellite rasters.
+
+---
+
+## 10. Repository & Project Structure
+
+```
+.
+├── cyclone_twin/                    # Core Python Backend Package
+│   ├── main.py                      # FastAPI app, endpoints, request ID telemetry
+│   ├── models.py                    # Pydantic v2 schemas and validation contracts
+│   ├── network_engine.py            # NetworkX MultiDiGraph, EPSG:32643, Dijkstra on G^R
+│   ├── corridor_engine.py           # Connected component clustering on disabled links
+│   ├── ranking_engine.py            # Deterministic multi-criteria scoring S(c)
+│   ├── advisory_engine.py           # 3-tier advisory (Gemini 2.5 Flash + fallback)
+│   ├── data_loader.py               # OSMnx network fetcher & satellite polygon loader
+│   ├── mock_chennai_graph.py        # Chennai 10-ward baseline graph (offline resilient)
+│   └── flood_polygon_fallback.py    # Cyclone Michaung flood extent (offline resilient)
+├── frontend/                        # Operational Web Console
+│   ├── src/App.jsx                  # Single-page cockpit, Leaflet map, guided stepper
+│   ├── src/index.css                # Dark mode design tokens, formula styling
+│   └── vite.config.js               # Vite build configuration
+├── tests/
+│   └── test_cyclone_twin.py         # 27 comprehensive pytest tests (100% pass)
+├── scripts/
+│   └── preflight.py                 # 8-point system preflight sanity validator
+├── docs/
+│   └── ADR-001-cyclone-twin-architecture.md  # Architectural Decision Record
+└── logs/
+    └── FINAL_VERIFICATION.md        # Comprehensive Phase 3 verification evidence
+```

@@ -377,6 +377,10 @@ html, body, #root {
   padding: 0.9rem 1.1rem;
 }
 
+.sidebar-panel > * {
+  flex-shrink: 0;
+}
+
 /* WHY THIS MATTERS DETERMINISTIC CARD (Section 6) */
 .why-matters-box {
   background: #090e17;
