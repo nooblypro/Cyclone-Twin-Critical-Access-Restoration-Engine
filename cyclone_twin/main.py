@@ -177,13 +177,21 @@ def flood_apply(req: FloodApplyRequest):
     state.network_engine.restore_all()
 
     # Load flood polygon (custom or fallback)
-    flood_geojson = state.data_loader.load_flood_polygon(
-        custom_geojson=req.flood_geojson,
-        attempt_nrsc=True,
-    )
-
-    geom_dict = flood_geojson.get("geometry", flood_geojson)
-    flood_shape = normalize_polygon_geometry(shape(geom_dict))
+    try:
+        flood_geojson = state.data_loader.load_flood_polygon(
+            custom_geojson=req.flood_geojson,
+            attempt_nrsc=True,
+        )
+        geom_dict = flood_geojson.get("geometry", flood_geojson)
+        flood_shape = normalize_polygon_geometry(shape(geom_dict))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning(f"Invalid flood GeoJSON geometry provided: {exc}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid flood GeoJSON geometry: {str(exc)}",
+        )
 
     # Identify disabled segments enforcing bridge/tunnel/layer rules (Section 15)
     disabled_segs, disabled_edges = identify_flood_disabled_segments(
