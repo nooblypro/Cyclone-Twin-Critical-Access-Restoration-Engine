@@ -1,23 +1,26 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import L from "leaflet";
 import {
   ShieldAlert,
-  Activity,
-  Layers,
   Zap,
   CheckCircle2,
-  Clock,
-  ArrowRight,
   TrendingUp,
-  MapPin,
-  RefreshCw,
   FileText,
   AlertTriangle,
-  Play,
   RotateCcw,
+  HelpCircle,
 } from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
+
+// Presentation-level Semantic State Labels (Section 5)
+const STATE_LABELS = {
+  BASE: "NETWORK BASELINE",
+  FLOODED: "HAZARD SCENARIO",
+  RANKED: "VULNERABILITY ASSESSMENT",
+  SELECTED: "CRITICAL INFRASTRUCTURE",
+  CLEARED: "MITIGATION SIMULATION",
+};
 
 export default function CycloneTwinApp() {
   // State Machine: BASE -> FLOODED -> RANKED -> SELECTED -> CLEARED
@@ -28,7 +31,7 @@ export default function CycloneTwinApp() {
   // Core Data
   const [mapData, setMapData] = useState(null);
   const [accessStatus, setAccessStatus] = useState({
-    accessible_population: 298000,
+    accessible_population: 477000,
     isolated_facilities: [],
     isolated_communities: [],
   });
@@ -38,7 +41,7 @@ export default function CycloneTwinApp() {
   const [manifest, setManifest] = useState(null);
   const [clearedCorridorId, setClearedCorridorId] = useState(null);
   const [showManifest, setShowManifest] = useState(false);
-  const [killerDemoMode, setKillerDemoMode] = useState(false);
+  const [showNovelty, setShowNovelty] = useState(true);
 
   // Map Refs
   const mapContainerRef = useRef(null);
@@ -46,7 +49,29 @@ export default function CycloneTwinApp() {
   const layerGroupRef = useRef(null);
   const highlightLayerRef = useRef(null);
 
-  // 1. Initialize Leaflet Map
+  // 1. Fetch Map Data & Initial Status
+  const fetchInitialData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE}/map/data`);
+      if (!res.ok) throw new Error("Failed to connect to Cyclone Twin API");
+      const data = await res.json();
+      setMapData(data);
+
+      const statusRes = await fetch(`${API_BASE}/accessibility/status`);
+      if (statusRes.ok) {
+        const sData = await statusRes.json();
+        setAccessStatus(sData);
+      }
+      setLoading(false);
+    } catch (err) {
+      console.warn("Backend connecting...", err);
+      setErrorMsg("Cyclone Twin Backend Offline. Ensure uvicorn is running on port 8000.");
+      setLoading(false);
+    }
+  }, []);
+
+  // 2. Initialize Leaflet Map
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
@@ -77,29 +102,7 @@ export default function CycloneTwinApp() {
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, []);
-
-  // 2. Fetch Map Data & Initial Status
-  const fetchInitialData = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`${API_BASE}/map/data`);
-      if (!res.ok) throw new Error("Failed to connect to Cyclone Twin API");
-      const data = await res.json();
-      setMapData(data);
-
-      const statusRes = await fetch(`${API_BASE}/accessibility/status`);
-      if (statusRes.ok) {
-        const sData = await statusRes.json();
-        setAccessStatus(sData);
-      }
-      setLoading(false);
-    } catch (err) {
-      console.warn("Backend connecting...", err);
-      setErrorMsg("Cyclone Twin Backend Offline. Ensure uvicorn is running on port 8000.");
-      setLoading(false);
-    }
-  };
+  }, [fetchInitialData]);
 
   // 3. Render Vector Layers on Map
   useEffect(() => {
@@ -108,7 +111,7 @@ export default function CycloneTwinApp() {
     const lg = layerGroupRef.current;
     lg.clearLayers();
 
-    // A. Render Flood Footprint (if in FLOODED, RANKED, SELECTED, or CLEARED)
+    // A. Render Flood Footprint (HAZARD)
     if (systemState !== "BASE" && mapData.flood) {
       L.geoJSON(mapData.flood, {
         style: {
@@ -121,7 +124,7 @@ export default function CycloneTwinApp() {
       }).addTo(lg);
     }
 
-    // B. Render Road Network
+    // B. Render Road Network (VULNERABILITY / RECOVERY)
     if (mapData.roads && mapData.roads.features) {
       L.geoJSON(mapData.roads, {
         style: (feature) => {
@@ -145,10 +148,10 @@ export default function CycloneTwinApp() {
             `<div style="font-family: monospace; font-size: 11px;">
               <strong>${p.name}</strong><br/>
               Status: <span style="color: ${p.disabled ? '#ff2a5f' : '#00e676'}; font-weight: bold;">
-                ${p.disabled ? 'FLOODED / IMPASSABLE' : 'OPERATIONAL'}
+                ${p.disabled ? 'HAZARD: SUBMERGED / IMPASSABLE' : 'OPERATIONAL'}
               </span><br/>
               Speed: ${p.speed_kph} km/h | Length: ${Math.round(p.length)}m
-              ${p.bridge === 'yes' ? ' | <em>Elevated Span</em>' : ''}
+              ${p.bridge === 'yes' ? ' | <em>Elevated Span Preserved</em>' : ''}
             </div>`,
             { sticky: true }
           );
@@ -186,7 +189,7 @@ export default function CycloneTwinApp() {
             <strong style="font-size: 13px;">${p.name}</strong><br/>
             Capacity: ${p.beds} beds<br/>
             Power Status: ${p.power_status ? '⚡ Online' : '⚠️ Offline'}<br/>
-            Network Access: <strong style="color: ${isIsolated ? '#d00' : '#0a0'};">
+            Network Consequence: <strong style="color: ${isIsolated ? '#d00' : '#0a0'};">
               ${isIsolated ? 'ISOLATED BY FLOODING' : 'ACCESSIBLE'}
             </strong>
           </div>
@@ -214,16 +217,16 @@ export default function CycloneTwinApp() {
           <div style="font-family: monospace; font-size: 11px;">
             <strong>${p.name}</strong><br/>
             Population: ${p.population.toLocaleString()}<br/>
-            Status: <span style="color: ${isIsolated ? '#ff2a5f' : '#00e676'}; font-weight: bold;">
+            Network Access: <span style="color: ${isIsolated ? '#ff2a5f' : '#00e676'}; font-weight: bold;">
               ${isIsolated ? 'CUT OFF / ISOLATED' : 'EMERGENCY ACCESS ACTIVE'}
             </span>
           </div>
         `);
       });
     }
-  }, [mapData, systemState, accessStatus, clearedCorridorId]);
+  }, [mapData, systemState, accessStatus, clearedCorridorId, rankedCorridors]);
 
-  // 4. Highlight Selected Corridor
+  // 4. Highlight Selected Corridor & Affected Nodes
   useEffect(() => {
     if (!highlightLayerRef.current) return;
     const hl = highlightLayerRef.current;
@@ -249,7 +252,7 @@ export default function CycloneTwinApp() {
   // ACTION HANDLERS
   // ==========================================
 
-  // Step 1: Replay Cyclone Michaung Inundation
+  // Step 1: Introduce Hazard (Cyclone Michaung Inundation)
   const handleApplyFlood = async () => {
     try {
       setLoading(true);
@@ -259,8 +262,8 @@ export default function CycloneTwinApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
-      if (!res.ok) throw new Error("Flood application failed");
-      const data = await res.json();
+      if (!res.ok) throw new Error("Flood scenario application failed");
+      await res.json();
 
       setSystemState("FLOODED");
       setClearedCorridorId(null);
@@ -275,7 +278,7 @@ export default function CycloneTwinApp() {
     }
   };
 
-  // Step 2: Rank Restoration Corridors
+  // Step 2: Vulnerability Assessment & Criticality Ranking
   const handleRankCorridors = async () => {
     try {
       setLoading(true);
@@ -305,7 +308,7 @@ export default function CycloneTwinApp() {
     }
   };
 
-  // Step 3: Select Corridor & Generate Advisory
+  // Step 3: Inspect Corridor Failure Consequences
   const handleSelectCorridor = async (corr) => {
     setSelectedCorridor(corr);
     setSystemState("SELECTED");
@@ -328,7 +331,7 @@ export default function CycloneTwinApp() {
     }
   };
 
-  // Step 4: Simulate Clearance & Dynamic Recovery
+  // Step 4: Simulate Restoration (Mitigation Simulation)
   const handleClearCorridor = async () => {
     if (!selectedCorridor) return;
     try {
@@ -339,7 +342,7 @@ export default function CycloneTwinApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ corridor_id: selectedCorridor.corridor_id }),
       });
-      if (!res.ok) throw new Error("Clearance simulation failed");
+      if (!res.ok) throw new Error("Restoration simulation failed");
       const data = await res.json();
 
       setClearedCorridorId(data.corridor_id);
@@ -363,7 +366,6 @@ export default function CycloneTwinApp() {
       setSelectedCorridor(null);
       setAdvisory(null);
       setClearedCorridorId(null);
-      setKillerDemoMode(false);
       await fetchInitialData();
       setLoading(false);
     } catch (err) {
@@ -372,9 +374,7 @@ export default function CycloneTwinApp() {
     }
   };
 
-  // Killer Demo Comparison Data
-  // Corridor B (Lifeline): Saidapet Adyar Crossing (e.g. corridor_02 or corridor_03)
-  // Corridor A (Peripheral): Santhome Feeder (corridor_01)
+  // Killer Comparison Pair (Real Calculated Data)
   const corrB = rankedCorridors.find(c => c.corridor_id === "corridor_03" || c.corridor_id === "corridor_02") || rankedCorridors[0];
   const corrA = rankedCorridors.find(c => c.corridor_id === "corridor_01") || rankedCorridors[rankedCorridors.length - 1];
 
@@ -383,13 +383,18 @@ export default function CycloneTwinApp() {
       {/* 1. TOP OPERATIONAL HEADER */}
       <header className="top-header">
         <div className="brand-section">
-          <span className="brand-badge">GCC TWIN // V1.0</span>
-          <h1 className="brand-title">
-            CYCLONE TWIN
-          </h1>
-          <span className="brand-subtitle">
-            From Flood Impact to Network Vulnerability
-          </span>
+          <div className="brand-main">
+            <span className="brand-badge">GCC TWIN // V2.0</span>
+            <h1 className="brand-title">
+              CYCLONE TWIN
+            </h1>
+            <span className="brand-subtitle">
+              From Flood Impact to Network Vulnerability
+            </span>
+          </div>
+          <p className="brand-statement">
+            "Most flood maps show where infrastructure is affected. Cyclone Twin shows what happens to the emergency network when that infrastructure fails."
+          </p>
         </div>
 
         <div className="provenance-cluster">
@@ -405,19 +410,54 @@ export default function CycloneTwinApp() {
             CRS: EPSG:32643
           </div>
           <div className="prov-pill">
-            THRESHOLD: 30m
+            LIMIT: 30m / 200m
           </div>
+          <button
+            onClick={() => setShowNovelty(!showNovelty)}
+            className="btn-action"
+            style={{ padding: "0.2rem 0.45rem", fontSize: "0.65rem" }}
+            title="Why Cyclone Twin?"
+          >
+            <HelpCircle size={12} /> WHY TWIN?
+          </button>
           <button
             onClick={() => setShowManifest(!showManifest)}
             className="btn-action"
-            style={{ padding: "0.25rem 0.5rem", fontSize: "0.68rem" }}
+            style={{ padding: "0.2rem 0.45rem", fontSize: "0.65rem" }}
           >
-            <FileText size={12} /> MANIFEST
+            <FileText size={12} /> AUDIT PROVENANCE
           </button>
         </div>
       </header>
 
-      {/* 2. MAIN VIEWPORT (Map + Intelligence Panel) */}
+      {/* 2. DEMO STORY SEQUENCE BREADCRUMB */}
+      <div className="narrative-bar">
+        <div className="narrative-flow">
+          <span style={{ color: "var(--text-muted)", marginRight: "0.2rem" }}>NARRATIVE FLOW:</span>
+          <span className={`flow-step ${systemState === "BASE" ? "active" : ""}`}>1. THREAT</span>
+          <span className="flow-sep">→</span>
+          <span className={`flow-step ${systemState === "FLOODED" ? "active" : ""}`}>2. HAZARD</span>
+          <span className="flow-sep">→</span>
+          <span className={`flow-step ${systemState === "FLOODED" ? "active" : ""}`}>3. FAILURE</span>
+          <span className="flow-sep">→</span>
+          <span className={`flow-step ${systemState === "RANKED" || systemState === "SELECTED" ? "active" : ""}`}>4. CASCADE</span>
+          <span className="flow-sep">→</span>
+          <span className={`flow-step ${systemState === "RANKED" || systemState === "SELECTED" ? "active" : ""}`}>5. CRITICALITY</span>
+          <span className="flow-sep">→</span>
+          <span className={`flow-step ${systemState === "CLEARED" ? "active" : ""}`}>6. MITIGATION</span>
+          <span className="flow-sep">→</span>
+          <span className={`flow-step ${systemState === "CLEARED" ? "active" : ""}`}>7. RECOVERY</span>
+        </div>
+
+        <div className="concepts-cluster">
+          <span className="concept-tag hazard">1. HAZARD: WHERE AFFECTED?</span>
+          <span className="concept-tag vuln">2. VULNERABILITY: WHAT FAILS?</span>
+          <span className="concept-tag crit">3. CRITICALITY: WHAT MATTERS?</span>
+          <span className="concept-tag mitig">4. MITIGATION: WHAT TO RESTORE?</span>
+        </div>
+      </div>
+
+      {/* 3. MAIN VIEWPORT (Map + Intelligence Panel) */}
       <main className="main-viewport">
         {/* Map Panel */}
         <div className="map-panel">
@@ -430,7 +470,7 @@ export default function CycloneTwinApp() {
               disabled={loading || systemState === "FLOODED"}
               className={`btn-action ${systemState === "BASE" ? "danger" : ""}`}
             >
-              <ShieldAlert size={14} /> 1. APPLY MICHAUNG FLOOD
+              <ShieldAlert size={14} /> 1. APPLY HAZARD (MICHAUNG)
             </button>
 
             <button
@@ -438,15 +478,7 @@ export default function CycloneTwinApp() {
               disabled={loading || systemState === "BASE"}
               className={`btn-action ${systemState === "FLOODED" ? "primary" : ""}`}
             >
-              <Zap size={14} /> 2. RANK RESTORATION
-            </button>
-
-            <button
-              onClick={() => setKillerDemoMode(!killerDemoMode)}
-              disabled={rankedCorridors.length < 2}
-              className={`btn-action ${killerDemoMode ? "primary" : ""}`}
-            >
-              <TrendingUp size={14} /> 3. KILLER DEMO COMPARE
+              <Zap size={14} /> 2. ASSESS VULNERABILITY & RANK
             </button>
 
             <button
@@ -454,7 +486,7 @@ export default function CycloneTwinApp() {
               disabled={loading || !selectedCorridor || systemState === "CLEARED"}
               className={`btn-action ${selectedCorridor && systemState !== "CLEARED" ? "success" : ""}`}
             >
-              <CheckCircle2 size={14} /> 4. SIMULATE CLEARING
+              <CheckCircle2 size={14} /> 3. SIMULATE RESTORATION
             </button>
 
             <button
@@ -474,7 +506,9 @@ export default function CycloneTwinApp() {
                 {accessStatus.accessible_population.toLocaleString()}
               </div>
               <div className="hud-sub">
-                Total City Pop: 410,000
+                {accessStatus.isolated_communities.length > 0
+                  ? `${(477000 - accessStatus.accessible_population).toLocaleString()} citizens stranded`
+                  : "All 477,000 citizens connected"}
               </div>
             </div>
 
@@ -484,17 +518,17 @@ export default function CycloneTwinApp() {
                 {accessStatus.isolated_communities.length}
               </div>
               <div className="hud-sub">
-                {accessStatus.isolated_communities.length > 0 ? "Access Severed" : "All Wards Connected"}
+                {accessStatus.isolated_communities.length > 0 ? "Emergency Access Severed" : "All Lifelines Active"}
               </div>
             </div>
 
             <div className="hud-tile">
-              <div className="hud-label">ACTIVE RESTORATION CORRIDORS</div>
-              <div className="hud-val">
-                {rankedCorridors.length}
+              <div className="hud-label">PRESENTATION STATE</div>
+              <div className="hud-val" style={{ fontSize: "0.95rem", color: "var(--accent-cyan)" }}>
+                {STATE_LABELS[systemState]}
               </div>
               <div className="hud-sub">
-                {clearedCorridorId ? `1 Cleared (${clearedCorridorId})` : "Awaiting Clearance"}
+                {clearedCorridorId ? `Restored: ${clearedCorridorId}` : `${rankedCorridors.length} Corridors Identified`}
               </div>
             </div>
           </div>
@@ -503,19 +537,60 @@ export default function CycloneTwinApp() {
         {/* Right Intelligence Sidebar */}
         <aside className="sidebar-panel">
           {errorMsg && (
-            <div style={{ background: "rgba(255,42,95,0.15)", border: "1px solid #ff2a5f", padding: "0.65rem", borderRadius: "4px", fontSize: "0.75rem", color: "#ff2a5f", fontFamily: "monospace" }}>
+            <div style={{ background: "rgba(255,42,95,0.15)", border: "1px solid #ff2a5f", padding: "0.6rem", borderRadius: "4px", fontSize: "0.72rem", color: "#ff2a5f", fontFamily: "monospace" }}>
               <AlertTriangle size={14} style={{ display: "inline", marginRight: "4px", verticalAlign: "middle" }} />
               {errorMsg}
             </div>
           )}
 
-          {/* KILLER DEMO COMPARISON CARD */}
-          {(killerDemoMode || (rankedCorridors.length >= 2 && systemState !== "BASE")) && corrA && corrB && (
+          {/* NOVELTY CARD: WHY CYCLONE TWIN? */}
+          {showNovelty && (
+            <div className="novelty-card">
+              <div className="novelty-header">
+                <span>WHY CYCLONE TWIN?</span>
+                <span style={{ fontSize: "0.6rem", color: "var(--text-muted)", cursor: "pointer" }} onClick={() => setShowNovelty(false)}>✕ HIDE</span>
+              </div>
+              <div className="novelty-grid">
+                <div className="novelty-item">
+                  <strong>1. HAZARD</strong>
+                  Maps where infrastructure physically intersects water.
+                </div>
+                <div className="novelty-item">
+                  <strong>2. VULNERABILITY</strong>
+                  Simulates what happens to the network when it fails.
+                </div>
+                <div className="novelty-item">
+                  <strong>3. CRITICALITY</strong>
+                  Measures systemic network consequence, not road size.
+                </div>
+                <div className="novelty-item">
+                  <strong>4. MITIGATION</strong>
+                  Identifies which lifeline to protect or restore first.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SCENARIO INTRODUCTION BANNER */}
+          {systemState === "FLOODED" && (
+            <div style={{ background: "rgba(255,42,95,0.12)", border: "1px solid #ff2a5f", padding: "0.75rem", borderRadius: "6px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: "monospace", fontSize: "0.75rem", fontWeight: "bold", color: "#ff2a5f" }}>
+                <ShieldAlert size={14} /> CYCLONE SCENARIO ACTIVE // HAZARD DETECTED
+              </div>
+              <p style={{ fontSize: "0.72rem", color: "var(--text-primary)", marginTop: "0.3rem", lineHeight: 1.35 }}>
+                Surface roads flooded in Adyar basin, Velachery, and Santhome. <strong>179,000 citizens</strong> in 4 wards lost emergency access within 30 minutes. Click <strong>"2. ASSESS VULNERABILITY & RANK"</strong> to simulate network failure consequences.
+              </p>
+            </div>
+          )}
+
+          {/* DEDICATED KILLER COMPARISON VIEW: VULNERABILITY IMPACT */}
+          {corrA && corrB && rankedCorridors.length >= 2 && (
             <div className="killer-comparison-box">
               <div className="killer-header">
                 <span className="killer-title">
-                  <TrendingUp size={14} color="#00e5ff" /> KILLER DEMO: NETWORK CRITICALITY DIVERGENCE
+                  <TrendingUp size={14} color="#00e5ff" /> VULNERABILITY IMPACT: KILLER DEMO
                 </span>
+                <span style={{ fontSize: "0.62rem", fontFamily: "monospace", color: "var(--text-muted)" }}>REAL VALUES</span>
               </div>
               <div className="killer-quote">
                 "The physical hazard is similar. The network vulnerability isn't."
@@ -531,15 +606,19 @@ export default function CycloneTwinApp() {
                   <div className="comp-name">CORRIDOR A ({corrA.corridor_id})</div>
                   <div className="comp-condition">Condition: FLOODED</div>
                   <div className="comp-stat-row">
-                    <span>Pop. Recovered:</span>
-                    <strong>{corrA.score_breakdown.population_recovered.toLocaleString()}</strong>
-                  </div>
-                  <div className="comp-stat-row">
-                    <span>Hosp. Recovered:</span>
+                    <span>Hospitals Cut Off:</span>
                     <strong>{corrA.score_breakdown.hospitals_recovered}</strong>
                   </div>
                   <div className="comp-stat-row">
-                    <span>Score:</span>
+                    <span>Population Affected:</span>
+                    <strong>{corrA.score_breakdown.population_recovered.toLocaleString()}</strong>
+                  </div>
+                  <div className="comp-stat-row">
+                    <span>Transit Degradation:</span>
+                    <strong>+{corrA.score_breakdown.time_saved_minutes} min</strong>
+                  </div>
+                  <div className="comp-stat-row">
+                    <span>Criticality Score:</span>
                     <strong>{corrA.score.toFixed(3)}</strong>
                   </div>
                   <div className="comp-badge low">CRITICALITY: LOW</div>
@@ -554,15 +633,19 @@ export default function CycloneTwinApp() {
                   <div className="comp-name">CORRIDOR B ({corrB.corridor_id})</div>
                   <div className="comp-condition">Condition: FLOODED</div>
                   <div className="comp-stat-row">
-                    <span>Pop. Recovered:</span>
-                    <strong>{corrB.score_breakdown.population_recovered.toLocaleString()}</strong>
-                  </div>
-                  <div className="comp-stat-row">
-                    <span>Hosp. Recovered:</span>
+                    <span>Hospitals Cut Off:</span>
                     <strong>{corrB.score_breakdown.hospitals_recovered}</strong>
                   </div>
                   <div className="comp-stat-row">
-                    <span>Score:</span>
+                    <span>Population Affected:</span>
+                    <strong>{corrB.score_breakdown.population_recovered.toLocaleString()}</strong>
+                  </div>
+                  <div className="comp-stat-row">
+                    <span>Transit Degradation:</span>
+                    <strong>+{corrB.score_breakdown.time_saved_minutes} min</strong>
+                  </div>
+                  <div className="comp-stat-row">
+                    <span>Criticality Score:</span>
                     <strong>{corrB.score.toFixed(3)}</strong>
                   </div>
                   <div className="comp-badge danger">CRITICALITY: HIGH</div>
@@ -571,23 +654,56 @@ export default function CycloneTwinApp() {
             </div>
           )}
 
-          {/* RANKED CORRIDORS TABLE */}
+          {/* VULNERABILITY ANALYSIS & CASCADE VISUALIZATION */}
+          {selectedCorridor && (
+            <div className="cascade-box">
+              <div className="cascade-title">
+                <span>WHAT HAPPENS IF THIS INFRASTRUCTURE FAILS?</span>
+                <span style={{ color: "var(--accent-cyan)", fontSize: "0.68rem" }}>{selectedCorridor.corridor_id}</span>
+              </div>
+
+              <div className="cascade-steps">
+                <div className="cascade-step warning">
+                  <span className="cascade-step-label">1. CORRIDOR FAILURE</span>
+                  <span className="cascade-step-val">{Math.round(selectedCorridor.total_length_m)}m road blocked ({selectedCorridor.physical_segment_ids.length} segments)</span>
+                </div>
+                <div className="cascade-step warning">
+                  <span className="cascade-step-label">2. NETWORK DISRUPTION</span>
+                  <span className="cascade-step-val">Arterial lifeline severed across flood basin</span>
+                </div>
+                <div className="cascade-step danger">
+                  <span className="cascade-step-label">3. HOSPITAL IMPACT</span>
+                  <span className="cascade-step-val">{selectedCorridor.score_breakdown.hospitals_recovered > 0 ? `${selectedCorridor.score_breakdown.hospitals_recovered} trauma facilities isolated` : "Trauma access detour forced"}</span>
+                </div>
+                <div className="cascade-step danger">
+                  <span className="cascade-step-label">4. POPULATION IMPACT</span>
+                  <span className="cascade-step-val">{selectedCorridor.score_breakdown.population_recovered.toLocaleString()} residents stranded / cut off</span>
+                </div>
+                <div className="cascade-step">
+                  <span className="cascade-step-label">5. TRAVEL-TIME CASCADE</span>
+                  <span className="cascade-step-val">+{selectedCorridor.score_breakdown.time_saved_minutes} min emergency transit penalty</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* INFRASTRUCTURE CRITICALITY RANKING VIEW */}
           <div className="section-panel">
             <div className="section-title-bar">
               <span className="section-title">
-                PRIORITIZED RESTORATION CORRIDORS ({rankedCorridors.length})
+                INFRASTRUCTURE CRITICALITY ({rankedCorridors.length})
               </span>
-              <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontFamily: "monospace" }}>
-                Formula: S(c) = 0.4ΔH + 0.3ΔP + 0.2ΔT - 0.1ΔD
+              <span style={{ fontSize: "0.62rem", color: "var(--text-muted)", fontFamily: "monospace" }}>
+                Consequence-Based Priority
               </span>
             </div>
 
             {rankedCorridors.length === 0 ? (
-              <div style={{ padding: "1.5rem", textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: "6px", color: "var(--text-muted)", fontSize: "0.75rem", fontFamily: "monospace" }}>
-                Apply flood scenario and click "RANK RESTORATION" to compute deterministic corridor priorities.
+              <div style={{ padding: "1.2rem", textAlign: "center", border: "1px dashed var(--border-strong)", borderRadius: "6px", color: "var(--text-muted)", fontSize: "0.72rem", fontFamily: "monospace" }}>
+                Apply flood scenario and click "ASSESS VULNERABILITY" to calculate systemic criticality.
               </div>
             ) : (
-              <div style={{ maxHeight: "210px", overflowY: "auto", border: "1px solid var(--border-strong)", borderRadius: "6px" }}>
+              <div style={{ maxHeight: "180px", overflowY: "auto", border: "1px solid var(--border-strong)", borderRadius: "6px" }}>
                 <table className="corridor-table">
                   <thead>
                     <tr>
@@ -631,22 +747,22 @@ export default function CycloneTwinApp() {
             )}
           </div>
 
-          {/* SCORE BREAKDOWN INSPECTOR */}
+          {/* CRITICALITY SCORE BREAKDOWN (Section 10) */}
           {selectedCorridor && (
             <div className="breakdown-box">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <strong style={{ fontSize: "0.8rem", fontFamily: "monospace", color: "var(--text-primary)" }}>
-                  METRIC BREAKDOWN: {selectedCorridor.corridor_id}
+                <strong style={{ fontSize: "0.75rem", fontFamily: "monospace", color: "var(--text-primary)" }}>
+                  CRITICALITY DECOMPOSITION: {selectedCorridor.corridor_id}
                 </strong>
-                <span style={{ fontSize: "0.75rem", fontFamily: "monospace", color: "var(--accent-cyan)", fontWeight: "bold" }}>
-                  SCORE: {selectedCorridor.score.toFixed(4)}
+                <span style={{ fontSize: "0.72rem", fontFamily: "monospace", color: "var(--accent-cyan)", fontWeight: "bold" }}>
+                  S(c) = {selectedCorridor.score.toFixed(4)}
                 </span>
               </div>
 
               {/* Delta H */}
               <div className="breakdown-row">
                 <div className="breakdown-meta">
-                  <span style={{ color: "var(--text-secondary)" }}>ΔH Hospital Access (40%)</span>
+                  <span style={{ color: "var(--text-secondary)" }}>ΔH Hospital Recovery (40%)</span>
                   <strong>{selectedCorridor.score_breakdown.hospitals_recovered} recovered ({selectedCorridor.score_breakdown.delta_h.toFixed(2)})</strong>
                 </div>
                 <div className="progress-track">
@@ -679,7 +795,7 @@ export default function CycloneTwinApp() {
               {/* Delta D */}
               <div className="breakdown-row">
                 <div className="breakdown-meta">
-                  <span style={{ color: "var(--text-secondary)" }}>ΔD Difficulty Penalty (10%)</span>
+                  <span style={{ color: "var(--text-secondary)" }}>ΔD Length Penalty (10%)</span>
                   <strong>{Math.round(selectedCorridor.total_length_m)}m ({selectedCorridor.score_breakdown.delta_d.toFixed(2)})</strong>
                 </div>
                 <div className="progress-track">
@@ -689,15 +805,15 @@ export default function CycloneTwinApp() {
             </div>
           )}
 
-          {/* OPERATIONAL FIELD DISPATCH ADVISORY */}
+          {/* MITIGATION PRIORITY & AI ADVISORY (Sections 12 & 18) */}
           {advisory && (
             <div className="advisory-box">
               <div className="advisory-header">
                 <span className="advisory-verb-badge">
-                  {advisory.action_verb}
+                  MITIGATION: {advisory.action_verb}
                 </span>
-                <span style={{ fontSize: "0.68rem", fontFamily: "monospace", color: advisory.fallback ? "var(--status-warning)" : "var(--accent-cyan)" }}>
-                  {advisory.fallback ? "⚡ DETERMINISTIC FALLBACK" : "✨ GEMINI 2.5 FLASH"}
+                <span style={{ fontSize: "0.65rem", fontFamily: "monospace", color: advisory.fallback ? "var(--status-warning)" : "var(--accent-cyan)" }}>
+                  {advisory.fallback ? "⚡ DETERMINISTIC ADVISORY" : "✨ AI-GENERATED ADVISORY"}
                 </span>
               </div>
               <p className="advisory-text">
@@ -712,51 +828,51 @@ export default function CycloneTwinApp() {
         </aside>
       </main>
 
-      {/* 3. STATUS BAR FOOTER */}
+      {/* 4. STATUS BAR FOOTER */}
       <footer className="status-bar">
         <div className="status-left">
-          <span>STATE: <strong>{systemState}</strong></span>
-          <span>DISPATCH NODE: <strong>GCC RIPON BUILDING</strong></span>
-          <span>EVENT: <strong>CYCLONE MICHAUNG IMPACT FORECAST</strong></span>
+          <span>STATE: <strong>{STATE_LABELS[systemState]}</strong></span>
+          <span>LOCATION: <strong>GREATER CHENNAI CORPORATION</strong></span>
+          <span>HAZARD FOOTPRINT: <strong>CYCLONE MICHAUNG</strong></span>
         </div>
         <div className="status-right">
-          <span>ALGORITHM: <strong>DETERMINISTIC DIJKSTRA (G^R)</strong></span>
-          <span>LATENCY: <strong>~45ms</strong></span>
+          <span>ALGORITHM: <strong>REVERSED MULTI-SOURCE DIJKSTRA (G^R)</strong></span>
+          <span>ACCESSIBILITY CUTOFF: <strong>30 MIN</strong></span>
         </div>
       </footer>
 
-      {/* MANIFEST MODAL */}
+      {/* AUDIT / DATA PROVENANCE MANIFEST MODAL (Section 17) */}
       {showManifest && manifest && (
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-          background: "rgba(0,0,0,0.8)", zIndex: 9999,
+          background: "rgba(0,0,0,0.85)", zIndex: 9999,
           display: "flex", alignItems: "center", justifyContent: "center"
         }}>
           <div style={{
             background: "var(--bg-surface)", border: "1px solid var(--border-strong)",
             borderRadius: "8px", width: "540px", padding: "1.5rem",
-            boxShadow: "0 16px 48px rgba(0,0,0,0.6)"
+            boxShadow: "0 16px 48px rgba(0,0,0,0.7)"
           }}>
-            <h3 style={{ fontSize: "1rem", fontFamily: "monospace", marginBottom: "1rem", color: "var(--text-primary)" }}>
-              AUDIT TRAIL // SCENARIO MANIFEST
+            <h3 style={{ fontSize: "0.95rem", fontFamily: "monospace", marginBottom: "0.85rem", color: "var(--text-primary)" }}>
+              AUDIT / DATA PROVENANCE // SCENARIO MANIFEST
             </h3>
-            <div style={{ fontFamily: "monospace", fontSize: "0.75rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "1.25rem" }}>
+            <div style={{ fontFamily: "monospace", fontSize: "0.72rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "1.2rem" }}>
               <div>Graph Source: <strong>{manifest.graph_source}</strong></div>
               <div>Flood Source: <strong>{manifest.flood_source}</strong></div>
               <div>CRS: <strong>{manifest.graph_crs}</strong></div>
-              <div>Threshold: <strong>{manifest.threshold_seconds}s</strong></div>
+              <div>Threshold: <strong>{manifest.threshold_seconds}s (30m)</strong></div>
               <div>Preset: <strong>{manifest.weight_preset}</strong></div>
               <div>Snap Limit: <strong>{manifest.snap_distance_threshold_m}m</strong></div>
               <div>Disabled Edges: <strong>{manifest.total_disabled_edges}</strong></div>
               <div>Corridors: <strong>{manifest.total_corridors}</strong></div>
             </div>
             {manifest.snap_warnings.length > 0 && (
-              <div style={{ fontSize: "0.7rem", color: "var(--status-warning)", marginBottom: "1rem" }}>
+              <div style={{ fontSize: "0.68rem", color: "var(--status-warning)", marginBottom: "1rem" }}>
                 Warnings: {manifest.snap_warnings.join(", ")}
               </div>
             )}
             <button onClick={() => setShowManifest(false)} className="btn-action primary" style={{ width: "100%", justifyContent: "center" }}>
-              CLOSE MANIFEST
+              CLOSE AUDIT PROVENANCE
             </button>
           </div>
         </div>
