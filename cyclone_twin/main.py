@@ -5,6 +5,7 @@ accessibility status, corridor ranking, corridor clearing, and advisory generati
 """
 
 import logging
+import os
 import time
 import uuid
 from typing import Any, Dict, List, Optional
@@ -86,10 +87,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware for Next.js / Vite local development
+# CORS middleware supporting production Vercel origins and local dev
+allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "*")
+if allowed_origins_raw == "*":
+    origins = ["*"]
+    allow_origin_regex = None
+else:
+    origins = [orig.strip() for orig in allowed_origins_raw.split(",") if orig.strip()]
+    allow_origin_regex = r"https://.*\.vercel\.app"
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

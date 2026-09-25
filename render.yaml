@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: cyclone-twin-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn cyclone_twin.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.0
+      - key: ALLOWED_ORIGINS
+        value: https://cyclone-twin.vercel.app,http://localhost:5173,http://localhost:5174
+      - key: GEMINI_API_KEY
+        sync: false

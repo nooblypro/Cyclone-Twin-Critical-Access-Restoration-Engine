@@ -3,7 +3,10 @@
  * Handles base URLs, structured requests, timeout aborts, and sanitized error responses.
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_BASE ||
+  "http://localhost:8000";
 
 /**
  * Generic JSON fetch wrapper with timeout and standardized error handling.

@@ -1,45 +1,48 @@
 /**
  * CYCLONE TWIN — MUNICIPAL EMERGENCY OPERATIONS CONSOLE
  * GCC Network Vulnerability Forecaster & Critical Access Restoration Engine
- * Phase 10: Map-First Spatial Experience & Tactical Command Hierarchy
+ * Visual v2: Professional Emergency GIS Command Console
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import L from "leaflet";
 import {
   ShieldAlert,
   Play,
   RotateCcw,
   Activity,
-  Sparkles,
-  Info,
   Layers,
   CheckCircle2,
   AlertTriangle,
   FileText,
   X,
   Compass,
+  Check,
 } from "lucide-react";
 import { api } from "./api.js";
 
-// Default Chennai Map Center & Zoom Constants
-const CHENNAI_CENTER = [13.015, 80.225];
+// Chennai Metropolitan Arterial Bounding Box
+const CHENNAI_BOUNDS = [
+  [12.89, 80.15],
+  [13.09, 80.29],
+];
+const CHENNAI_CENTER = [13.005, 80.225];
 const CHENNAI_ZOOM = 12;
 
-// Custom Leaflet DivIcons for High-Contrast Operational Cartography
+// Professional Emergency Map Icons (High-Contrast, Zero-Watermark)
 const createHospitalIcon = (isIsolated) =>
   L.divIcon({
     className: "custom-map-icon hospital-icon",
     html: `<div style="
-      background: ${isIsolated ? "#ef4444" : "#10b981"};
-      width: 24px; height: 24px; border-radius: 6px;
+      background: ${isIsolated ? "#ef4444" : "#059669"};
+      width: 22px; height: 22px; border-radius: 4px;
       display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 2px 8px ${isIsolated ? "rgba(239,68,68,0.5)" : "rgba(16,185,129,0.5)"};
-      border: 2px solid #ffffff; color: #ffffff; font-weight: 900; font-size: 13px;
-      letter-spacing: -0.5px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+      border: 1.5px solid #ffffff; color: #ffffff; font-weight: 800; font-size: 11px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     ">H</div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
   });
 
 const createCommunityIcon = (isIsolated) =>
@@ -47,22 +50,22 @@ const createCommunityIcon = (isIsolated) =>
     className: "custom-map-icon community-icon",
     html: `<div style="
       background: ${isIsolated ? "#ef4444" : "#0284c7"};
-      width: 14px; height: 14px; border-radius: 50%;
+      width: 12px; height: 12px; border-radius: 50%;
       border: 2px solid #ffffff;
-      box-shadow: 0 1px 6px ${isIsolated ? "rgba(239,68,68,0.6)" : "rgba(2,132,199,0.5)"};
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
     "></div>`,
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
   });
 
 export default function CycloneTwinApp() {
-  // Scenario & Workflow State
+  // Simulation Workflow State
   const [systemState, setSystemState] = useState("BASE"); // "BASE" | "FLOODED" | "RANKED" | "SELECTED" | "CLEARED"
   const [demoStep, setDemoStep] = useState(1); // 1 to 6
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
 
-  // Simulation & Domain Data
+  // Domain Data from Backend API
   const [mapData, setMapData] = useState(null);
   const [accessStatus, setAccessStatus] = useState(null);
   const [rankedCorridors, setRankedCorridors] = useState([]);
@@ -71,11 +74,23 @@ export default function CycloneTwinApp() {
   const [advisory, setAdvisory] = useState(null);
   const [manifest, setManifest] = useState(null);
 
-  // Modal Dialogs
+  // Cartography Layer Toggles
+  const [layersVisibility, setLayersVisibility] = useState({
+    floodInundation: true,
+    roadNetwork: true,
+    impassable: true,
+    selectedCorridor: true,
+    hospitalsOperational: true,
+    traumaCentersIsolated: true,
+    communitiesAccessible: true,
+    communitiesIsolated: true,
+  });
+
+  // Modal State
   const [modalTab, setModalTab] = useState("DATA"); // "DATA" | "MODEL" | "ASSUMPTIONS" | "LIMITATIONS"
   const [showModal, setShowModal] = useState(false);
 
-  // Leaflet Map Refs
+  // Map References
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const layersRef = useRef({
@@ -87,7 +102,7 @@ export default function CycloneTwinApp() {
     restored: null,
   });
 
-  // 1. Initial Load & Baseline Fetch
+  // 1. Initial Load & Baseline Fetch from Backend
   useEffect(() => {
     let ignore = false;
     const initBaseline = async () => {
@@ -105,7 +120,7 @@ export default function CycloneTwinApp() {
         }
       } catch (err) {
         if (!ignore) {
-          setErrorMsg(`Failed to initialize baseline network: ${err.message}`);
+          setErrorMsg(`Backend connection unavailable: ${err.message}`);
           setLoading(false);
         }
       }
@@ -117,7 +132,7 @@ export default function CycloneTwinApp() {
     };
   }, []);
 
-  // 2. Leaflet Map Initialization with CartoDB Voyager / Neutral Modern Basemap
+  // 2. Leaflet Map Initialization with Clean Neutral Basemap (NO WATERMARK)
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
@@ -126,13 +141,22 @@ export default function CycloneTwinApp() {
       zoom: CHENNAI_ZOOM,
       zoomControl: false,
       attributionControl: false,
+      maxBounds: [
+        [12.75, 80.0],
+        [13.25, 80.45],
+      ],
+      minZoom: 11,
+      maxZoom: 17,
     });
 
-    // High-familiarity light neutral basemap
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    // Clean, high-legibility OpenStreetMap standard tile provider (Keyless, zero watermark)
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
-      subdomains: "abcd",
+      subdomains: ["a", "b", "c"],
     }).addTo(map);
+
+    // Initial fit to metropolitan bounds with padding
+    map.fitBounds(CHENNAI_BOUNDS, { padding: [24, 24] });
 
     mapInstanceRef.current = map;
 
@@ -142,12 +166,12 @@ export default function CycloneTwinApp() {
     };
   }, []);
 
-  // 3. Leaflet Layer Render & Synchronization
+  // 3. Leaflet Layer Render & Layer Synchronization
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !mapData) return;
 
-    // A. Clean previous layers
+    // Clean previous layers
     Object.keys(layersRef.current).forEach((key) => {
       if (layersRef.current[key]) {
         map.removeLayer(layersRef.current[key]);
@@ -155,53 +179,60 @@ export default function CycloneTwinApp() {
       }
     });
 
-    // B. Render Flood Inundation Footprint (Semi-transparent cyan with dashed perimeter)
-    if (mapData.flood && (systemState !== "BASE" || demoStep > 1)) {
+    // A. Flood Inundation Footprint (Semi-transparent blue polygon)
+    if (
+      layersVisibility.floodInundation &&
+      mapData.flood &&
+      (systemState !== "BASE" || demoStep > 1)
+    ) {
       const floodLayer = L.geoJSON(mapData.flood, {
         style: {
           color: "#0284c7",
           weight: 2,
           fillColor: "#38bdf8",
-          fillOpacity: 0.22,
+          fillOpacity: 0.28,
           dashArray: "4, 4",
         },
       }).addTo(map);
       layersRef.current.flood = floodLayer;
     }
 
-    // C. Render Road Network Edges (Clear Road Hierarchy)
-    if (mapData.roads) {
+    // B. Road Network Edges (Clear Hierarchical Cartography)
+    if (layersVisibility.roadNetwork && mapData.roads) {
       const roadsLayer = L.geoJSON(mapData.roads, {
         style: (feature) => {
           const isDisabled = feature.properties.disabled;
           const isElevated = feature.properties.bridge === "yes" || feature.properties.layer > 0;
+
           if (isDisabled) {
-            return { color: "#ef4444", weight: 4, opacity: 0.95, dashArray: "4, 6" };
+            return layersVisibility.impassable
+              ? { color: "#dc2626", weight: 4.5, opacity: 0.95, dashArray: "5, 5" }
+              : { opacity: 0, fillOpacity: 0 };
           }
           if (isElevated) {
-            return { color: "#f59e0b", weight: 3.5, opacity: 0.95 };
+            return { color: "#d97706", weight: 3.5, opacity: 0.95 };
           }
-          return { color: "#475569", weight: 2.5, opacity: 0.75 };
+          return { color: "#475569", weight: 2.5, opacity: 0.8 };
         },
         onEachFeature: (feature, layer) => {
           layer.bindTooltip(
             `<strong>${feature.properties.name}</strong><br/>Length: ${feature.properties.length}m | Speed: ${feature.properties.speed_kph} km/h`,
-            { className: "map-tooltip" }
+            { className: "gis-map-tooltip" }
           );
         },
       }).addTo(map);
       layersRef.current.roads = roadsLayer;
     }
 
-    // D. Render Restored Corridor Highlight (Vibrant Recovery Emerald)
-    if (clearedCorridorId && rankedCorridors.length > 0) {
+    // C. Restored Corridor Lifeline (Vibrant Recovery Emerald)
+    if (layersVisibility.selectedCorridor && clearedCorridorId && rankedCorridors.length > 0) {
       const clearedCorr = rankedCorridors.find((c) => c.corridor_id === clearedCorridorId);
       if (clearedCorr?.geometry) {
         const restoredLayer = L.geoJSON(clearedCorr.geometry, {
           style: {
-            color: "#10b981",
+            color: "#059669",
             weight: 7,
-            opacity: 0.95,
+            opacity: 1.0,
             dashArray: "8, 4",
           },
         }).addTo(map);
@@ -209,27 +240,37 @@ export default function CycloneTwinApp() {
       }
     }
 
-    // E. Render Selected Corridor Highlight (High-Contrast Cyan with Outer Border)
-    if (selectedCorridor?.geometry && selectedCorridor.corridor_id !== clearedCorridorId) {
+    // D. Selected Corridor Highlight (Cyan Candidate Route)
+    if (
+      layersVisibility.selectedCorridor &&
+      selectedCorridor?.geometry &&
+      selectedCorridor.corridor_id !== clearedCorridorId
+    ) {
       const highlightLayer = L.geoJSON(selectedCorridor.geometry, {
         style: {
           color: "#0284c7",
           weight: 7,
-          opacity: 0.95,
+          opacity: 1.0,
         },
       }).addTo(map);
       layersRef.current.highlight = highlightLayer;
     }
 
-    // F. Render Health Facilities (Trauma Hospitals)
+    // E. Health Facilities (Trauma Centers)
     if (mapData.facilities) {
       const facilitiesLayer = L.geoJSON(mapData.facilities, {
+        filter: (feature) => {
+          const isIsolated = feature.properties.isolated;
+          if (isIsolated && !layersVisibility.traumaCentersIsolated) return false;
+          if (!isIsolated && !layersVisibility.hospitalsOperational) return false;
+          return true;
+        },
         pointToLayer: (feature, latlng) => {
           const isIsolated = feature.properties.isolated;
           const marker = L.marker(latlng, { icon: createHospitalIcon(isIsolated) });
           marker.bindTooltip(
-            `<strong>${feature.properties.name}</strong><br/>Capacity: ${feature.properties.beds} beds<br/>Status: ${isIsolated ? "ISOLATED" : "ACCESSIBLE"}`,
-            { className: "map-tooltip" }
+            `<strong>${feature.properties.name}</strong><br/>Capacity: ${feature.properties.beds} beds<br/>Status: ${isIsolated ? "ISOLATED" : "OPERATIONAL"}`,
+            { className: "gis-map-tooltip" }
           );
           return marker;
         },
@@ -237,27 +278,54 @@ export default function CycloneTwinApp() {
       layersRef.current.facilities = facilitiesLayer;
     }
 
-    // G. Render Community Wards
+    // F. Community Wards
     if (mapData.communities) {
       const communitiesLayer = L.geoJSON(mapData.communities, {
+        filter: (feature) => {
+          const isIsolated = feature.properties.isolated;
+          if (isIsolated && !layersVisibility.communitiesIsolated) return false;
+          if (!isIsolated && !layersVisibility.communitiesAccessible) return false;
+          return true;
+        },
         pointToLayer: (feature, latlng) => {
           const isIsolated = feature.properties.isolated;
           const marker = L.marker(latlng, { icon: createCommunityIcon(isIsolated) });
           const transitTime = feature.properties.travel_time_sec
             ? `${(feature.properties.travel_time_sec / 60).toFixed(1)} min`
-            : ">30 min (Disconnected)";
+            : ">30 min (Isolated)";
           marker.bindTooltip(
             `<strong>${feature.properties.name}</strong><br/>Population: ${feature.properties.population.toLocaleString()}<br/>Transit: ${transitTime}`,
-            { className: "map-tooltip" }
+            { className: "gis-map-tooltip" }
           );
           return marker;
         },
       }).addTo(map);
       layersRef.current.communities = communitiesLayer;
     }
-  }, [mapData, systemState, selectedCorridor, clearedCorridorId, rankedCorridors, demoStep]);
+  }, [
+    mapData,
+    systemState,
+    selectedCorridor,
+    clearedCorridorId,
+    rankedCorridors,
+    demoStep,
+    layersVisibility,
+  ]);
 
-  // 4. Operational Actions & State Transitions
+  // 4. Map Control Handlers
+  const handleZoomIn = useCallback(() => {
+    mapInstanceRef.current?.zoomIn();
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    mapInstanceRef.current?.zoomOut();
+  }, []);
+
+  const handleRecenter = useCallback(() => {
+    mapInstanceRef.current?.fitBounds(CHENNAI_BOUNDS, { padding: [24, 24], duration: 0.5 });
+  }, []);
+
+  // 5. Operational Scenario Handlers
   const handleApplyFlood = async () => {
     try {
       setLoading(true);
@@ -306,16 +374,15 @@ export default function CycloneTwinApp() {
     setSelectedCorridor(corr);
     setSystemState("SELECTED");
 
-    // Camera fly to focus on the selected corridor
     if (mapInstanceRef.current && corr.corridor_id === "corridor_03") {
-      mapInstanceRef.current.flyTo([13.015, 80.22], 13, { duration: 0.8 });
+      mapInstanceRef.current.flyTo([13.015, 80.22], 13.5, { duration: 0.6 });
     }
 
     try {
       const advData = await api.generateAdvisory(corr.corridor_id, corr.score_breakdown);
       setAdvisory(advData);
     } catch (err) {
-      console.warn("Advisory generator cascaded to Tier 2 fallback", err);
+      console.warn("Advisory generator cascaded to deterministic fallback", err);
     }
   };
 
@@ -363,7 +430,7 @@ export default function CycloneTwinApp() {
       setLoading(false);
 
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.flyTo(CHENNAI_CENTER, CHENNAI_ZOOM, { duration: 0.6 });
+        mapInstanceRef.current.fitBounds(CHENNAI_BOUNDS, { padding: [24, 24], duration: 0.5 });
       }
     } catch (err) {
       setErrorMsg(`Network reset error: ${err.message}`);
@@ -371,7 +438,6 @@ export default function CycloneTwinApp() {
     }
   };
 
-  // 5. 6-Step Stepper Controller
   const handleNextDemoStep = () => {
     if (demoStep === 1) handleApplyFlood();
     else if (demoStep === 2) handleRankCorridors();
@@ -381,59 +447,51 @@ export default function CycloneTwinApp() {
     else if (demoStep === 6) handleResetNetwork();
   };
 
-  // 6. Metric Calculations for HUD
+  const toggleLayer = (layerKey) => {
+    setLayersVisibility((prev) => ({
+      ...prev,
+      [layerKey]: !prev[layerKey],
+    }));
+  };
+
+  // Metrics derived from actual server state
   const totalPopulation = 477000;
   const accessiblePop = accessStatus?.accessible_population ?? totalPopulation;
   const isolatedPop = totalPopulation - accessiblePop;
-  const isolatedPercent = ((isolatedPop / totalPopulation) * 100).toFixed(1);
   const activeHospitals = 6 - (accessStatus?.isolated_facilities?.length ?? 0);
 
-  // Killer Comparison Corridors
-  const corridorA = rankedCorridors.find((c) => c.corridor_id === "corridor_01") || {
-    corridor_id: "corridor_01",
-    score: -0.0497,
-    score_breakdown: { delta_p: 0, population_recovered: 0, delta_t: 0, time_saved_minutes: 0, delta_d: 0.4971 },
-  };
-
-  const corridorB = rankedCorridors.find((c) => c.corridor_id === "corridor_03") || {
-    corridor_id: "corridor_03",
-    score: 0.0724,
-    score_breakdown: { delta_p: 0.1866, population_recovered: 89000, delta_t: 0.134, time_saved_minutes: 22.0, delta_d: 0.1062 },
-  };
-
   return (
-    <div className="command-console">
-      {/* 1. TOP COMMAND BAR */}
-      <header className="top-header">
-        <div className="brand-section">
-          <div className="brand-badge">GCC OPERATIONS</div>
+    <div className="gis-command-console">
+      {/* 1. TOP HEADER */}
+      <header className="gis-header">
+        <div className="gis-header-left">
+          <div className="brand-icon">
+            <ShieldAlert size={18} color="var(--accent-cyan)" />
+          </div>
           <div>
-            <h1 className="brand-title">
-              <ShieldAlert size={18} color="var(--accent-cyan)" />
-              CYCLONE TWIN
-            </h1>
-            <p className="brand-subtitle">From Flood Impact to Network Vulnerability Forecaster</p>
+            <h1 className="brand-heading">CYCLONE TWIN</h1>
+            <p className="brand-subheading">Critical Access Restoration Engine</p>
           </div>
         </div>
 
-        <div className="header-center">
-          <div className={`state-badge ${systemState.toLowerCase()}`}>
-            <Activity size={12} />
+        <div className="gis-header-center">
+          <div className={`status-pill ${systemState.toLowerCase()}`}>
+            <span className="status-dot">●</span>
             STATE: {systemState === "BASE" ? "BASELINE ACCESSIBILITY" : systemState === "FLOODED" ? "CYCLONE MICHAUNG HAZARD ACTIVE" : systemState === "RANKED" ? "CRITICALITY ASSESSED" : systemState === "SELECTED" ? "CORRIDOR INSPECTED" : "RESTORATION SIMULATED"}
           </div>
         </div>
 
-        <div className="header-controls">
+        <div className="gis-header-right">
           <button
             onClick={() => {
               setModalTab("DATA");
               setShowModal(true);
             }}
-            className="btn-action tertiary"
+            className="gis-btn tertiary"
             title="Data & Model Provenance"
           >
-            <FileText size={13} />
-            PROVENANCE
+            <FileText size={12} />
+            Provenance
           </button>
 
           <button
@@ -441,50 +499,49 @@ export default function CycloneTwinApp() {
               setModalTab("MODEL");
               setShowModal(true);
             }}
-            className="btn-action tertiary"
+            className="gis-btn tertiary"
             title="Model Card & Specifications"
           >
-            <Info size={13} />
-            MODEL CARD
+            Model Card
           </button>
 
           <button
             onClick={handleResetNetwork}
-            className="btn-action secondary"
+            className="gis-btn secondary"
             disabled={loading || systemState === "BASE"}
-            title="Reset to Baseline"
+            title="Reset Network"
           >
-            <RotateCcw size={14} />
-            RESET
+            <RotateCcw size={12} />
+            Reset
           </button>
 
           <button
             onClick={handleNextDemoStep}
-            className="btn-action primary"
+            className="gis-btn primary"
             disabled={loading}
           >
-            <Play size={14} fill="#040810" />
-            {demoStep === 1 ? "1. APPLY HAZARD" : demoStep === 2 ? "2. RANK CRITICALITY" : demoStep === 3 ? "3. COMPARE DIVERGENCE" : demoStep === 4 ? "4. MITIGATION STRATEGY" : demoStep === 5 ? "5. SIMULATE RECOVERY" : "6. RESET NETWORK"}
+            <Play size={12} fill="#05080f" />
+            {demoStep === 1 ? "1. Apply Hazard" : demoStep === 2 ? "2. Rank Criticality" : demoStep === 3 ? "3. Compare Divergence" : demoStep === 4 ? "4. Mitigation Strategy" : demoStep === 5 ? "5. Simulate Recovery" : "6. Reset Network"}
           </button>
         </div>
       </header>
 
-      {/* 2. DEMO STEPPER PROGRESSION BAR */}
-      <nav className="stepper-bar" aria-label="Demo Progression">
+      {/* 2. SCENARIO PROGRESSION PIPELINE */}
+      <nav className="gis-stepper" aria-label="Simulation Pipeline">
         {[
-          { step: 1, label: "1. BASELINE", desc: "477k Normal Access" },
-          { step: 2, label: "2. HAZARD", desc: "Cyclone Michaung" },
-          { step: 3, label: "3. VULNERABILITY", desc: "179k Stranded" },
-          { step: 4, label: "4. CRITICALITY", desc: "A vs B Divergence" },
-          { step: 5, label: "5. MITIGATION", desc: "Saidapet Lifeline" },
-          { step: 6, label: "6. RECOVERY", desc: "+89k Citizens Restored" },
+          { step: 1, label: "1. Baseline" },
+          { step: 2, label: "2. Hazard" },
+          { step: 3, label: "3. Vulnerability" },
+          { step: 4, label: "4. Criticality" },
+          { step: 5, label: "5. Mitigation" },
+          { step: 6, label: "6. Recovery" },
         ].map((item) => {
           const isCompleted = demoStep > item.step;
           const isActive = demoStep === item.step;
           return (
             <div
               key={item.step}
-              className={`step-card ${isActive ? "active" : ""} ${isCompleted ? "completed" : ""}`}
+              className={`stepper-node ${isActive ? "active" : ""} ${isCompleted ? "completed" : ""}`}
               onClick={() => {
                 if (item.step === 1) handleResetNetwork();
                 else if (item.step === 2) handleApplyFlood();
@@ -492,417 +549,435 @@ export default function CycloneTwinApp() {
                 else setDemoStep(item.step);
               }}
             >
-              <div className="step-badge">
-                {isCompleted ? <CheckCircle2 size={12} /> : item.step}
+              <div className="stepper-badge">
+                {isCompleted ? <CheckCircle2 size={11} /> : item.step}
               </div>
-              <div className="step-label">{item.label}</div>
+              <span className="stepper-text">{item.label}</span>
             </div>
           );
         })}
       </nav>
 
-      {/* Error Banner */}
+      {/* Error Alert */}
       {errorMsg && (
-        <div className="error-banner">
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <AlertTriangle size={14} />
+        <div className="gis-error-banner">
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <AlertTriangle size={13} />
             {errorMsg}
           </div>
-          <button onClick={() => setErrorMsg(null)} style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}>
-            <X size={14} />
+          <button onClick={() => setErrorMsg(null)} className="error-close">
+            <X size={13} />
           </button>
         </div>
       )}
 
-      {/* 3. MAIN MAP-DOMINANT WORKSPACE */}
-      <main className="workspace-grid">
-        {/* Full-Dominant Map Spatial Canvas */}
-        <div className="map-canvas-container">
-          <div ref={mapContainerRef} className="leaflet-map" />
-
-          {/* Floating Metric HUD */}
-          <div className="map-hud-overlay">
-            <div className="hud-pill">
-              <span className="hud-label">ACCESSIBLE POPULATION</span>
-              <span className="hud-value tabular-nums">
-                {accessiblePop.toLocaleString()} <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: 500 }}>/ 477k</span>
-              </span>
-            </div>
-
-            <div className="hud-pill">
-              <span className="hud-label">ISOLATED CITIZENS</span>
-              <span className={`hud-value tabular-nums ${isolatedPop > 0 ? "danger" : "success"}`}>
-                {isolatedPop.toLocaleString()} <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>({isolatedPercent}%)</span>
-              </span>
-            </div>
-
-            <div className="hud-pill">
-              <span className="hud-label">TRAUMA HOSPITALS</span>
-              <span className="hud-value tabular-nums cyan">
-                {activeHospitals} <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: 500 }}>/ 6 OPERATIONAL</span>
-              </span>
-            </div>
-
-            {clearedCorridorId && (
-              <div className="hud-pill" style={{ border: "1px solid var(--status-success-border)", background: "rgba(16,185,129,0.15)" }}>
-                <span className="hud-label" style={{ color: "var(--status-success)" }}>CITIZENS RECOVERED</span>
-                <span className="hud-value tabular-nums success">+89,000</span>
+      {/* 3. THREE-PANE GIS WORKSPACE */}
+      <main className="gis-workspace">
+        {/* LEFT OPERATIONS PANEL: IMPACT OVERVIEW & CARTOGRAPHY */}
+        <aside className="gis-left-panel">
+          <div className="panel-scroll-content">
+            {/* Impact Overview Section */}
+            <div className="panel-section">
+              <div className="section-label">
+                <Activity size={12} color="var(--accent-cyan)" />
+                IMPACT OVERVIEW
               </div>
-            )}
-          </div>
 
-          {/* Floating Map Controls (Zoom & Recenter) */}
-          <div className="map-controls-overlay">
+              <div className="metric-box-grid">
+                {/* Accessible Population */}
+                <div className="metric-box">
+                  <div className="box-title">Accessible Population</div>
+                  <div className="box-number tabular-nums">
+                    {(accessiblePop / 1000).toFixed(0)}K
+                    <span className="box-sub tabular-nums"> / 477K</span>
+                  </div>
+                  <div className="bar-track">
+                    <div
+                      className="bar-fill green"
+                      style={{ width: `${(accessiblePop / totalPopulation) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Isolated Citizens */}
+                <div className={`metric-box ${isolatedPop > 0 ? "danger-box" : ""}`}>
+                  <div className="box-title">Isolated Citizens</div>
+                  <div className={`box-number tabular-nums ${isolatedPop > 0 ? "danger-text" : "green-text"}`}>
+                    {isolatedPop === 0 ? "0" : `${(isolatedPop / 1000).toFixed(0)}K`}
+                  </div>
+                  <div className="box-caption">
+                    {isolatedPop > 0 ? `${accessStatus?.isolated_communities?.length ?? 0} Cut-Off Wards (37.5%)` : "Normal Emergency Transit"}
+                  </div>
+                </div>
+
+                {/* Trauma Hospitals */}
+                <div className="metric-box">
+                  <div className="box-title">Trauma Hospitals</div>
+                  <div className="box-number tabular-nums cyan-text">
+                    {activeHospitals} / 6
+                  </div>
+                  <div className="box-caption">All Tertiary Centers Active</div>
+                </div>
+
+                {/* Citizens Recovered */}
+                <div className="metric-box recovery-box">
+                  <div className="box-title">Citizens Recovered</div>
+                  <div className="box-number tabular-nums green-text">
+                    {clearedCorridorId ? "+89K" : "0"}
+                  </div>
+                  <div className="box-caption">vs. Inundated Scenario</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Cartography Layers Section */}
+            <div className="panel-section">
+              <div className="section-label">
+                <Layers size={12} color="var(--accent-cyan)" />
+                CARTOGRAPHY
+              </div>
+
+              <div className="gis-layers-list">
+                {[
+                  { key: "floodInundation", label: "Flood Inundation (Michaung)", color: "#38bdf8", border: "#0284c7" },
+                  { key: "roadNetwork", label: "Road Network", color: "#475569" },
+                  { key: "impassable", label: "Blocked Roads (Flooded)", color: "#dc2626", dashed: true },
+                  { key: "selectedCorridor", label: "Selected / Restored Corridor", color: "#059669" },
+                  { key: "hospitalsOperational", label: "Hospitals (Operational)", isIcon: true, iconBg: "#059669", iconText: "H" },
+                  { key: "traumaCentersIsolated", label: "Trauma Centers (Isolated)", isIcon: true, iconBg: "#dc2626", iconText: "H" },
+                  { key: "communitiesAccessible", label: "Communities (Accessible)", isDot: true, dotBg: "#0284c7" },
+                  { key: "communitiesIsolated", label: "Communities (Isolated)", isDot: true, dotBg: "#dc2626" },
+                ].map((layer) => (
+                  <label key={layer.key} className="gis-layer-item">
+                    <input
+                      type="checkbox"
+                      checked={layersVisibility[layer.key]}
+                      onChange={() => toggleLayer(layer.key)}
+                      className="gis-checkbox"
+                    />
+                    <div className="gis-swatch-slot">
+                      {layer.isIcon ? (
+                        <span className="gis-icon-tag" style={{ background: layer.iconBg }}>{layer.iconText}</span>
+                      ) : layer.isDot ? (
+                        <span className="gis-dot-tag" style={{ background: layer.dotBg }} />
+                      ) : (
+                        <span
+                          className="gis-swatch-tag"
+                          style={{
+                            background: layer.color,
+                            border: layer.border ? `1px dashed ${layer.border}` : layer.dashed ? "1px dashed #ffffff" : "none",
+                          }}
+                        />
+                      )}
+                    </div>
+                    <span className="gis-layer-name">{layer.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* CENTER PRIMARY SURFACE: MAP CANVAS (DOMINANT VISUAL ELEMENT) */}
+        <section className="gis-center-map">
+          <div ref={mapContainerRef} className="gis-leaflet-container" />
+
+          {/* Compact GIS Map Controls */}
+          <div className="gis-map-controls">
             <button
-              className="map-ctrl-btn"
-              onClick={() => mapInstanceRef.current?.zoomIn()}
+              className="gis-ctrl-btn"
+              onClick={handleZoomIn}
               title="Zoom In"
               aria-label="Zoom In"
             >
               +
             </button>
             <button
-              className="map-ctrl-btn"
-              onClick={() => mapInstanceRef.current?.zoomOut()}
+              className="gis-ctrl-btn"
+              onClick={handleZoomOut}
               title="Zoom Out"
               aria-label="Zoom Out"
             >
               −
             </button>
             <button
-              className="map-ctrl-btn"
-              onClick={() => mapInstanceRef.current?.flyTo(CHENNAI_CENTER, CHENNAI_ZOOM, { duration: 0.6 })}
-              title="Recenter Chennai"
+              className="gis-ctrl-btn"
+              onClick={handleRecenter}
+              title="Recenter Chennai Metropolitan Extent"
               aria-label="Recenter Chennai"
             >
-              <Compass size={14} />
+              <Compass size={13} />
             </button>
           </div>
 
-          {/* Map Legend */}
-          <div className="map-legend-overlay">
-            <span className="legend-title">CARTOGRAPHY LAYERS</span>
-            <div className="legend-item">
-              <div className="legend-swatch" style={{ background: "#38bdf8", border: "1px dashed #0284c7" }}></div>
-              <span>Michaung Flood Basin</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-swatch" style={{ background: "#ef4444", border: "1px dashed #ffffff" }}></div>
-              <span>Impassable Arterial Road</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-swatch" style={{ background: "#f59e0b" }}></div>
-              <span>Elevated Bridge Span (Preserved)</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-swatch" style={{ background: "#0284c7" }}></div>
-              <span>Selected Critical Corridor</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-swatch" style={{ background: "#10b981", border: "1px dashed #ffffff" }}></div>
-              <span>Restored Arterial Lifeline</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-dot" style={{ background: "#10b981" }}></div>
-              <span>Trauma Center (Accessible)</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-dot" style={{ background: "#ef4444" }}></div>
-              <span>Trauma Center (Isolated)</span>
-            </div>
-            <div className="legend-item">
-              <div className="legend-dot" style={{ background: "#0284c7" }}></div>
-              <span>GCC Ward Centroid</span>
+          {/* Integrated Scenario Timeline Bar */}
+          <div className="gis-bottom-timeline">
+            <span className="timeline-tag">SCENARIO:</span>
+            <div className="timeline-buttons-group">
+              {[
+                { label: "Baseline", step: 1 },
+                { label: "Michaung Flood", step: 2 },
+                { label: "Select Corridor", step: 3 },
+                { label: "Restoration", step: 6 },
+              ].map((t) => (
+                <button
+                  key={t.step}
+                  className={`timeline-segment-btn ${demoStep === t.step || (t.step === 6 && systemState === "CLEARED") ? "active" : ""}`}
+                  onClick={() => {
+                    if (t.step === 1) handleResetNetwork();
+                    else if (t.step === 2) handleApplyFlood();
+                    else if (t.step === 3) handleRankCorridors();
+                    else if (t.step === 6) handleClearCorridor();
+                  }}
+                >
+                  {demoStep > t.step || (t.step === 6 && systemState === "CLEARED") ? (
+                    <Check size={10} className="check-icon" />
+                  ) : (
+                    <span className="step-num">{t.step}</span>
+                  )}
+                  <span>{t.label}</span>
+                </button>
+              ))}
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* 4. CONTEXTUAL OPERATIONS SIDEBAR */}
-        <aside className="sidebar-panel">
-          <div className="sidebar-content">
-            {/* A. CURRENT SITUATION */}
-            <section className="op-section">
-              <div className="op-section-header">
-                <span className="op-section-title">
-                  <Activity size={14} color="var(--accent-cyan)" />
-                  A. SITUATION & ACCESS STATUS
-                </span>
-                <span className="tabular-nums" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                  {accessStatus?.isolated_communities?.length ?? 0} ISOLATED WARDS
-                </span>
+        {/* RIGHT OPERATIONS PANEL: OPERATIONAL DECISION SURFACE */}
+        <aside className="gis-right-panel">
+          <div className="panel-scroll-content">
+            {/* 1. Selected Corridor Card */}
+            <div className="decision-card selected-corridor-box">
+              <div className="card-top-header">
+                <span className="card-category">SELECTED CORRIDOR</span>
+                <span className="priority-tag">PRIORITY 1</span>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "4px" }}>
-                <div style={{ background: "var(--bg-surface)", padding: "8px", borderRadius: "4px", border: "1px solid var(--border-subtle)" }}>
-                  <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)" }}>CRS PROJECTION</div>
-                  <div className="code-val" style={{ fontSize: "0.8125rem", color: "var(--text-primary)" }}>EPSG:32643 (UTM 43N)</div>
+              <h3 className="corridor-heading">Corridor B: Saidapet → Adyar Lifeline</h3>
+              <p className="corridor-descriptor">Highest-ranked intervention under the model</p>
+
+              {/* Four Dominant Operational Metrics */}
+              <div className="dominant-metrics-grid">
+                <div className="dominant-stat">
+                  <div className="stat-large green-text tabular-nums">+89K</div>
+                  <div className="stat-desc">Citizens recovered</div>
                 </div>
-                <div style={{ background: "var(--bg-surface)", padding: "8px", borderRadius: "4px", border: "1px solid var(--border-subtle)" }}>
-                  <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)" }}>ACCESS THRESHOLD</div>
-                  <div className="code-val" style={{ fontSize: "0.8125rem", color: "var(--text-primary)" }}>1,800s (30.0 min)</div>
+                <div className="dominant-stat">
+                  <div className="stat-large cyan-text tabular-nums">22 min</div>
+                  <div className="stat-desc">Detour time saved</div>
+                </div>
+                <div className="dominant-stat">
+                  <div className="stat-large tabular-nums">0.9 km</div>
+                  <div className="stat-desc">Corridor length</div>
+                </div>
+                <div className="dominant-stat">
+                  <div className="stat-large cyan-text tabular-nums">+0.0724</div>
+                  <div className="stat-desc">Criticality score</div>
                 </div>
               </div>
-            </section>
+            </div>
 
-            {/* B. KILLER COMPARISON: CORRIDOR A VS CORRIDOR B */}
-            <section className="op-section">
-              <div className="op-section-header">
-                <span className="op-section-title">
-                  <Layers size={14} color="var(--status-danger)" />
-                  B. CRITICALITY DIVERGENCE (A vs B)
-                </span>
-                <span className="brand-badge" style={{ fontSize: "0.625rem", background: "rgba(239,68,68,0.15)", color: "var(--status-danger)" }}>KILLER DEMO</span>
+            {/* 2. Population & Access Change Bar Chart */}
+            <div className="decision-card">
+              <div className="card-top-header">
+                <span className="card-category">POPULATION & ACCESS CHANGE</span>
               </div>
-              <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "8px" }}>
-                Two road corridors face identical flood inundation, but cause radically different network failures:
-              </p>
 
-              <div className="divergence-grid">
-                {/* Corridor A */}
-                <div
-                  className={`divergence-card ${selectedCorridor?.corridor_id === "corridor_01" ? "selected" : ""}`}
-                  onClick={() => handleSelectCorridor(corridorA)}
-                  style={{ cursor: "pointer" }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                    <span style={{ fontWeight: 700, fontSize: "0.8125rem" }}>CORRIDOR A</span>
-                    <span style={{ fontSize: "0.625rem", background: "var(--border-strong)", padding: "2px 6px", borderRadius: "3px" }}>LOW</span>
-                  </div>
-                  <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", marginBottom: "6px" }}>Santhome Feeder</div>
-                  <div className="card-metric-row">
-                    <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--text-primary)" }} className="tabular-nums">0</span>
-                    <span style={{ fontSize: "0.6875rem", color: "var(--text-muted)" }}>Citizens Recovered</span>
-                  </div>
-                  <div style={{ fontSize: "0.6875rem", color: "var(--text-secondary)", marginTop: "6px", fontFamily: "var(--font-mono)" }}>
-                    Time Delta: +0.0 min<br />
-                    Length: 4.3 km<br />
-                    Score: -0.0497
+              <div className="chart-legend-line">
+                <span><span className="legend-indicator accessible" /> Accessible</span>
+                <span><span className="legend-indicator isolated" /> Isolated</span>
+              </div>
+
+              <div className="access-chart">
+                <div className="chart-bar-row">
+                  <span className="bar-row-label">Baseline</span>
+                  <div className="bar-row-track">
+                    <div className="segment accessible" style={{ width: "100%" }}>477K</div>
                   </div>
                 </div>
 
-                {/* Corridor B */}
-                <div
-                  className={`divergence-card priority ${selectedCorridor?.corridor_id === "corridor_03" ? "selected" : ""}`}
-                  onClick={() => handleSelectCorridor(corridorB)}
-                  style={{ cursor: "pointer" }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                    <span style={{ fontWeight: 700, fontSize: "0.8125rem", color: "var(--accent-cyan)" }}>CORRIDOR B</span>
-                    <span style={{ fontSize: "0.625rem", background: "rgba(239,68,68,0.2)", color: "var(--status-danger)", padding: "2px 6px", borderRadius: "3px", fontWeight: 700 }}>PRIORITY 1</span>
+                <div className="chart-bar-row">
+                  <span className="bar-row-label">Michaung Flood</span>
+                  <div className="bar-row-track">
+                    <div className="segment accessible" style={{ width: "62.5%" }}>298K</div>
+                    <div className="segment isolated" style={{ width: "37.5%" }}>179K</div>
                   </div>
-                  <div style={{ fontSize: "0.6875rem", color: "var(--text-secondary)", marginBottom: "6px" }}>Saidapet Adyar Lifeline</div>
-                  <div className="card-metric-row">
-                    <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--status-success)" }} className="tabular-nums">+89,000</span>
-                    <span style={{ fontSize: "0.6875rem", color: "var(--text-muted)" }}>Citizens Recovered</span>
-                  </div>
-                  <div style={{ fontSize: "0.6875rem", color: "var(--text-secondary)", marginTop: "6px", fontFamily: "var(--font-mono)" }}>
-                    Detour Saved: 22.0 min<br />
-                    Length: 0.9 km<br />
-                    <span style={{ color: "var(--accent-cyan)", fontWeight: 700 }}>Score: +0.0724</span>
+                </div>
+
+                <div className="chart-bar-row">
+                  <span className="bar-row-label">Restoration</span>
+                  <div className="bar-row-track">
+                    <div className="segment accessible" style={{ width: "81.1%" }}>387K</div>
+                    <div className="segment isolated" style={{ width: "18.9%" }}>90K</div>
                   </div>
                 </div>
               </div>
-            </section>
+            </div>
 
-            {/* C. MULTI-CRITERIA SCORE FORMULA */}
-            <section className="op-section">
-              <div className="op-section-header">
-                <span className="op-section-title">
-                  <Activity size={14} color="var(--accent-cyan)" />
-                  C. MULTI-CRITERIA SCORE FORMULA
-                </span>
-                <span style={{ fontSize: "0.6875rem", color: "var(--accent-cyan)", fontWeight: 700 }}>RANK #1</span>
+            {/* 3. Why This Matters */}
+            <div className="decision-card impact-explanation-box">
+              <div className="card-top-header">
+                <span className="card-category text-cyan">WHY THIS MATTERS</span>
               </div>
-
-              <div className="formula-display">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>CRITICALITY SCORE S(c)</span>
-                  <span className="tabular-nums" style={{ fontSize: "1.375rem", fontWeight: 800, color: "var(--accent-cyan)" }}>+0.0724</span>
-                </div>
-
-                <div className="formula-components-grid">
-                  <div className="formula-box">
-                    <div className="f-title">Population Delta (0.30·ΔP)</div>
-                    <div className="f-val positive tabular-nums">+0.1492</div>
-                  </div>
-                  <div className="formula-box">
-                    <div className="f-title">Travel Time Delta (0.20·ΔT)</div>
-                    <div className="f-val neutral tabular-nums">+0.0000</div>
-                  </div>
-                  <div className="formula-box">
-                    <div className="f-title">Difficulty Penalty (-0.10·ΔD)</div>
-                    <div className="f-val negative tabular-nums">-0.0768</div>
-                  </div>
-                  <div className="formula-box">
-                    <div className="f-title">Hospital Delta (0.40·ΔH)</div>
-                    <div className="f-val neutral tabular-nums">+0.0000</div>
-                  </div>
-                </div>
-
-                <div className="formula-bar">
-                  S(c) = 0.40·ΔH + 0.30·ΔP + 0.20·ΔT - 0.10·ΔD
-                </div>
-              </div>
-            </section>
-
-            {/* D. WHY THIS MATTERS */}
-            <div className="impact-callout-card">
-              <div className="impact-callout-header">WHY THIS MATTERS // OPERATIONAL IMPACT</div>
-              <p className="impact-callout-body">
-                Restoring the <strong>Saidapet Adyar Lifeline (Corridor B)</strong> reconnects <strong>89,000 citizens</strong> across Saidapet and Jafferkhanpet wards to regional trauma centers, averting <strong>22.0 minutes of detour degradation</strong>.
+              <p className="impact-paragraph">
+                Restoring the Saidapet–Adyar lifeline reconnects <strong>89,000 citizens</strong> across the affected wards and reduces modeled detour time by <strong>22 minutes</strong>.
               </p>
             </div>
 
-            {/* E. AI ADVISORY DIRECTIVE */}
-            <section className="op-section">
-              <div className="op-section-header">
-                <span className="op-section-title">
-                  <Sparkles size={14} color="var(--accent-blue)" />
-                  E. OPERATIONAL DISPATCH DIRECTIVE
-                </span>
-                <span className="brand-badge" style={{ fontSize: "0.625rem", background: "rgba(61,130,246,0.15)", color: "var(--accent-blue)" }}>
-                  AI EXPLANATION
-                </span>
+            {/* 4. Operational Directive */}
+            <div className="decision-card directive-box">
+              <div className="card-top-header">
+                <span className="card-category">OPERATIONAL DIRECTIVE</span>
+                <span className="simulated-tag">SIMULATED</span>
+              </div>
+              <p className="directive-text">
+                {advisory?.advisory_text ||
+                  "Mobilize crews to clear secondary debris, re-establish lifeline routing for 89,000 cut-off citizens, and restore access to regional trauma centers."}
+              </p>
+            </div>
+
+            {/* 5. Score Breakdown */}
+            <div className="decision-card score-breakdown-box">
+              <div className="card-top-header">
+                <span className="card-category">SCORE BREAKDOWN</span>
+                <span className="final-score tabular-nums">+0.0724</span>
               </div>
 
-              {advisory ? (
-                <div className="advisory-box">
-                  <p className="advisory-text">{advisory.advisory_text}</p>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px", fontSize: "0.6875rem", color: "var(--text-muted)" }}>
-                    <span>Action: {advisory.action_verb}</span>
-                    <span>{advisory.fallback ? "Deterministic Fallback Active" : "Gemini 2.5 Flash Verified"}</span>
-                  </div>
+              <div className="score-components-grid">
+                <div className="score-slot">
+                  <span className="slot-name">Population Delta</span>
+                  <span className="slot-val green-text tabular-nums">+0.1492</span>
                 </div>
-              ) : (
-                <div className="advisory-placeholder">
-                  Awaiting corridor selection for field response instructions...
+                <div className="score-slot">
+                  <span className="slot-name">Travel Time</span>
+                  <span className="slot-val tabular-nums">+0.0000</span>
                 </div>
-              )}
-            </section>
+                <div className="score-slot">
+                  <span className="slot-name">Difficulty Penalty</span>
+                  <span className="slot-val danger-text tabular-nums">-0.0768</span>
+                </div>
+                <div className="score-slot">
+                  <span className="slot-name">Hospital Delta</span>
+                  <span className="slot-val tabular-nums">+0.0000</span>
+                </div>
+              </div>
+
+              <div className="formula-caption">
+                S(c) = 0.40·ΔH + 0.30·ΔP + 0.20·ΔT - 0.10·ΔD
+              </div>
+            </div>
           </div>
         </aside>
       </main>
 
-      {/* 5. FOOTER TELEMETRY STATUS BAR */}
-      <footer className="footer-bar">
-        <div className="footer-left">
-          <span>GCC DISASTER MANAGEMENT // CYCLONE TWIN RC-1</span>
-          <span>GRAPH: 25 NODES / 56 EDGES</span>
-          <span>ENGINE: MULTI-SOURCE DIJKSTRA (G^R)</span>
+      {/* 4. MINIMAL TECHNICAL FOOTER */}
+      <footer className="gis-footer">
+        <div className="footer-left-text">
+          CYCLONE TWIN // GCC DISASTER MANAGEMENT SIMULATION
         </div>
-        <div className="footer-right">
-          <span>LATENCY: &lt;4ms DETERMINISTIC</span>
-          <span className="status-live">● ENGINE READY</span>
+        <div className="footer-right-text">
+          <span className="green-dot">●</span> ENGINE READY
         </div>
       </footer>
 
-      {/* 6. DATA PROVENANCE & MODEL CARD MODAL */}
+      {/* 5. SPECIFICATION & PROVENANCE MODAL */}
       {showModal && (
-        <div className="modal-backdrop" onClick={() => setShowModal(false)} role="dialog" aria-modal="true">
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <ShieldAlert size={18} color="var(--accent-cyan)" />
-                <h3 style={{ fontSize: "1rem", fontWeight: 700 }}>DATA PROVENANCE & FORMAL MODEL SPECIFICATION</h3>
+        <div className="modal-overlay" onClick={() => setShowModal(false)} role="dialog" aria-modal="true">
+          <div className="modal-window" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-top">
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <ShieldAlert size={16} color="var(--accent-cyan)" />
+                <h3 className="modal-title">DATA PROVENANCE & SPECIFICATIONS</h3>
               </div>
-              <button onClick={() => setShowModal(false)} className="btn-action tertiary">
-                <X size={16} />
+              <button onClick={() => setShowModal(false)} className="gis-btn tertiary">
+                <X size={14} />
               </button>
             </div>
 
-            <div className="modal-tabs">
+            <div className="modal-nav">
               <button
-                className={`modal-tab-btn ${modalTab === "DATA" ? "active" : ""}`}
+                className={`tab-btn ${modalTab === "DATA" ? "active" : ""}`}
                 onClick={() => setModalTab("DATA")}
               >
-                1. DATA PROVENANCE
+                1. Data Sources
               </button>
               <button
-                className={`modal-tab-btn ${modalTab === "MODEL" ? "active" : ""}`}
+                className={`tab-btn ${modalTab === "MODEL" ? "active" : ""}`}
                 onClick={() => setModalTab("MODEL")}
               >
-                2. MODEL CARD
+                2. Model Card
               </button>
               <button
-                className={`modal-tab-btn ${modalTab === "ASSUMPTIONS" ? "active" : ""}`}
+                className={`tab-btn ${modalTab === "ASSUMPTIONS" ? "active" : ""}`}
                 onClick={() => setModalTab("ASSUMPTIONS")}
               >
-                3. ASSUMPTIONS
+                3. Assumptions
               </button>
               <button
-                className={`modal-tab-btn ${modalTab === "LIMITATIONS" ? "active" : ""}`}
+                className={`tab-btn ${modalTab === "LIMITATIONS" ? "active" : ""}`}
                 onClick={() => setModalTab("LIMITATIONS")}
               >
-                4. LIMITATIONS
+                4. Limitations
               </button>
             </div>
 
-            <div className="modal-body">
+            <div className="modal-body-area">
               {modalTab === "DATA" && (
                 <div>
-                  <h4 style={{ color: "var(--accent-cyan)", marginBottom: "8px" }}>Empirical Data Sources & Verification</h4>
-                  <p style={{ fontSize: "0.8125rem", lineHeight: 1.6, color: "var(--text-secondary)" }}>
-                    Cyclone Twin integrates verified geographic datasets calibrated to the Greater Chennai Corporation metropolitan area:
+                  <h4 style={{ color: "var(--accent-cyan)", marginBottom: "6px", fontSize: "13px" }}>Empirical Data Provenance</h4>
+                  <p style={{ fontSize: "12px", lineHeight: 1.5, color: "var(--text-secondary)" }}>
+                    Cyclone Twin is calibrated against verified spatial networks and population distributions for Greater Chennai Corporation:
                   </p>
-                  <ul style={{ paddingLeft: "20px", marginTop: "8px", fontSize: "0.8125rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>
-                    <li><strong>Road Network:</strong> Calibrated arterial multigraph in EPSG:32643 (UTM Zone 43N) with 25 junctions and 56 directed edges.</li>
-                    <li><strong>6 Trauma Hospitals:</strong> Real Chennai tertiary facilities (RGGGH, Apollo Greams, KMC, Fortis Malar, MIOT, Gleneagles) with verified GPS coordinates.</li>
-                    <li><strong>10 Study Wards:</strong> GCC census populations summing to exactly <strong>477,000 citizens</strong>.</li>
-                    <li><strong>Cyclone Michaung Hazard:</strong> Inundation polygons modeled from December 2023 NRSC / ISRO disaster assessments.</li>
+                  <ul style={{ paddingLeft: "18px", marginTop: "6px", fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                    <li><strong>Road Multigraph:</strong> 25 junctions and 56 directed edges in EPSG:32643 (UTM 43N).</li>
+                    <li><strong>6 Trauma Centers:</strong> Verified hospital GPS locations and grid statuses.</li>
+                    <li><strong>10 Study Wards:</strong> GCC census populations summing to exactly 477,000 citizens.</li>
+                    <li><strong>Michaung Inundation:</strong> Calibrated flood extent from December 2023 satellite observations.</li>
                   </ul>
-                  <div className="spec-grid" style={{ marginTop: "16px" }}>
+                  <div className="spec-table" style={{ marginTop: "12px" }}>
                     <div>Graph Source: <code>{manifest?.graph_source || "mock_fallback"}</code></div>
                     <div>Flood Source: <code>{manifest?.flood_source || "nrsc"}</code></div>
                     <div>CRS: <code>EPSG:32643</code></div>
-                    <div>Access Cutoff: <code>1800s (30m)</code></div>
-                    <div>Snap Limit: <code>200m</code></div>
-                    <div>Weight Preset: <code>life_safety</code></div>
+                    <div>Cutoff: <code>1800s (30m)</code></div>
                   </div>
                 </div>
               )}
 
               {modalTab === "MODEL" && (
                 <div>
-                  <h4 style={{ color: "var(--accent-cyan)", marginBottom: "8px" }}>Algorithmic Specification</h4>
-                  <p style={{ fontSize: "0.8125rem", lineHeight: 1.6, color: "var(--text-secondary)" }}>
-                    <strong>Multi-Source Dijkstra on Reversed Graph (G^R):</strong> Evaluates hospital accessibility for all communities simultaneously in O((V + E) log V) time while preserving one-way street constraints.
+                  <h4 style={{ color: "var(--accent-cyan)", marginBottom: "6px", fontSize: "13px" }}>Algorithmic Contract</h4>
+                  <p style={{ fontSize: "12px", lineHeight: 1.5, color: "var(--text-secondary)" }}>
+                    <strong>Multi-Source Dijkstra on G^R:</strong> Simultaneously traces shortest travel paths from all community centroids to active hospitals in O((V + E) log V) time.
                   </p>
-                  <p style={{ fontSize: "0.8125rem", lineHeight: 1.6, color: "var(--text-secondary)", marginTop: "8px" }}>
-                    <strong>Scoring Formula:</strong> S(c) = 0.40·ΔH + 0.30·ΔP + 0.20·ΔT - 0.10·ΔD, strictly bounded in [-1.0, 1.0].
-                  </p>
-                  <p style={{ fontSize: "0.8125rem", lineHeight: 1.6, color: "var(--text-secondary)", marginTop: "8px" }}>
-                    <strong>AI Isolation:</strong> Gemini operates as a read-only text formatter. It has zero authority to modify rankings or scores.
+                  <p style={{ fontSize: "12px", lineHeight: 1.5, color: "var(--text-secondary)", marginTop: "6px" }}>
+                    <strong>Deterministic Criticality:</strong> S(c) = 0.40·ΔH + 0.30·ΔP + 0.20·ΔT - 0.10·ΔD.
                   </p>
                 </div>
               )}
 
               {modalTab === "ASSUMPTIONS" && (
                 <div>
-                  <h4 style={{ color: "var(--accent-cyan)", marginBottom: "8px" }}>Operational Model Assumptions</h4>
-                  <ul style={{ paddingLeft: "20px", fontSize: "0.8125rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>
-                    <li>Emergency vehicles travel at free-flow speeds (25 to 60 km/h) under normal dry conditions.</li>
-                    <li>Road segments submerged &gt;30cm are impassable for standard emergency ambulances.</li>
-                    <li>Elevated flyovers and bridges remain passable during surface street inundation.</li>
-                    <li>Trauma centers without generator backup are excluded from emergency destination pools.</li>
+                  <h4 style={{ color: "var(--accent-cyan)", marginBottom: "6px", fontSize: "13px" }}>Operational Assumptions</h4>
+                  <ul style={{ paddingLeft: "18px", fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                    <li>Roads submerged &gt;30cm are impassable to standard ambulances.</li>
+                    <li>Grade-separated flyovers and elevated bridges remain operable during surface inundation.</li>
+                    <li>Hospitals without power are excluded as destination nodes.</li>
                   </ul>
                 </div>
               )}
 
               {modalTab === "LIMITATIONS" && (
                 <div>
-                  <h4 style={{ color: "var(--accent-cyan)", marginBottom: "8px" }}>Honest System Boundaries</h4>
-                  <ul style={{ paddingLeft: "20px", fontSize: "0.8125rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>
-                    <li><strong>Arterial Scope:</strong> The digital twin encompasses major arterials; local alleyways are not modeled.</li>
-                    <li><strong>Binary Passability:</strong> Flood footprint uses discrete inundation boundaries rather than 2D hydrodynamic flow equations.</li>
-                    <li><strong>Static Demographics:</strong> Ward populations are based on GCC census data, not real-time cellular movement.</li>
-                    <li><strong>Decision Support:</strong> Provides prioritized recommendations; final field dispatch rests with GCC incident commanders.</li>
+                  <h4 style={{ color: "var(--accent-cyan)", marginBottom: "6px", fontSize: "13px" }}>System Boundaries</h4>
+                  <ul style={{ paddingLeft: "18px", fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                    <li>Scope is restricted to major arterial lifelines.</li>
+                    <li>Decision-support prototype for emergency planners; incident commander holds final authority.</li>
                   </ul>
                 </div>
               )}
             </div>
 
-            <div className="modal-footer">
-              <button onClick={() => setShowModal(false)} className="btn-action primary">
-                CLOSE SPECIFICATION
+            <div className="modal-bottom">
+              <button onClick={() => setShowModal(false)} className="gis-btn primary">
+                Close
               </button>
             </div>
           </div>
