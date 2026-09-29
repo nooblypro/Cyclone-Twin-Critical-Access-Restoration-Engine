@@ -52,6 +52,7 @@ class Community(BaseModel):
     id: str
     name: str
     population: int = Field(..., ge=0)
+    vulnerability_index: float = Field(1.0, ge=0.1, le=5.0, description="Socioeconomic vulnerability weight for equity-weighted recovery")
     node_id: Optional[str] = None
     coords: Optional[Tuple[float, float]] = None  # (lon, lat) in WGS84
     accessible: bool = True
@@ -185,6 +186,25 @@ class AdvisoryGenerateRequest(BaseModel):
     score_breakdown: ScoreBreakdown
 
 
+class DecisionContext(BaseModel):
+    """
+    Structured, read-only decision context contract passed to the AI advisory layer.
+    Contains strictly factual, serialized outputs from the deterministic engines.
+    """
+    scenario_id: str = "default_michaung"
+    weather_summary: Dict[str, Any] = Field(default_factory=dict)
+    flood_summary: Dict[str, Any] = Field(default_factory=dict)
+    network_summary: Dict[str, Any] = Field(default_factory=dict)
+    accessibility_metrics: Dict[str, Any] = Field(default_factory=dict)
+    observations_summary: Dict[str, Any] = Field(default_factory=dict)
+    weights: Dict[str, float] = Field(default_factory=dict)
+    top_candidate: Optional[Dict[str, Any]] = None
+    alternatives: List[Dict[str, Any]] = Field(default_factory=list)
+    pareto_frontier_ids: List[str] = Field(default_factory=list)
+    provenance: Dict[str, Any] = Field(default_factory=dict)
+    model_limitations: List[str] = Field(default_factory=list)
+
+
 class AdvisoryGenerateResponse(BaseModel):
     advisory_text: str = Field(..., max_length=220)
     language: str = "en"
@@ -194,3 +214,14 @@ class AdvisoryGenerateResponse(BaseModel):
     road_names: List[str] = Field(default_factory=list)
     communities_affected: List[str] = Field(default_factory=list)
     action_verb: ActionVerb = ActionVerb.PRIORITIZE_ACCESS
+    summary: Optional[str] = None
+    current_situation: Optional[str] = None
+    key_impacts: Dict[str, Any] = Field(default_factory=dict)
+    recommended_candidate: Optional[str] = None
+    alternatives: List[str] = Field(default_factory=list)
+    evidence: List[str] = Field(default_factory=list)
+    assumptions: List[str] = Field(default_factory=list)
+    limitations: List[str] = Field(default_factory=list)
+    confidence_assessment: str = "Determined from model evidence thresholds"
+    provenance: Dict[str, Any] = Field(default_factory=dict)
+    generated_by: str = "deterministic_fallback"

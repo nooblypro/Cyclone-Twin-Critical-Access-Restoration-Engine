@@ -228,16 +228,16 @@ export const api = {
   // 23. Single Weather/Hazard Forecast (Phase L5 Read-Only)
   getForecast: (horizonHours = null) => {
     const query = horizonHours !== null ? `?horizon_hours=${encodeURIComponent(horizonHours)}` : "";
-    return fetchJson(`/forecast${query}`, { method: "GET" });
+    return fetchJson(`/forecast${query}`, { method: "GET", timeout: 25000 });
   },
 
   // 24. Forecast Timeline Projection (Phase L1/L5 Read-Only)
   getForecastTimeline: (horizon = "NOW") =>
-    fetchJson(`/forecast/timeline?horizon=${encodeURIComponent(horizon)}`, { method: "GET" }),
+    fetchJson(`/forecast/timeline?horizon=${encodeURIComponent(horizon)}`, { method: "GET", timeout: 25000 }),
 
   // 25. Forecast Vulnerability Projection (Phase L5 Read-Only)
   getForecastVulnerability: (horizon = "NOW") =>
-    fetchJson(`/forecast/vulnerability?horizon=${encodeURIComponent(horizon)}`, { method: "GET" }),
+    fetchJson(`/forecast/vulnerability?horizon=${encodeURIComponent(horizon)}`, { method: "GET", timeout: 25000 }),
 
   // 26. Submit Citizen Report (Phase L10)
   submitCitizenReport: (reportData) =>

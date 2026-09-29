@@ -1,0 +1,75 @@
+# ==============================================================================
+# CYCLONE TWIN — GOOGLE CLOUD BUILD CI/CD PIPELINE
+# Automated Pytest Validation → Cloud Run Backend → Firebase Hosting Deployment
+# ==============================================================================
+
+steps:
+  # Step 1: Run Full Pytest Backend Test Suite
+  - name: 'python:3.13-slim'
+    id: 'backend-test-suite'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install --no-cache-dir -r requirements.txt
+        pytest
+
+  # Step 2: Build Cloud Run Backend Container Image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-cloud-run-image'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/cyclone-twin-repo/backend:$COMMIT_SHA'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/cyclone-twin-repo/backend:latest'
+      - '.'
+
+  # Step 3: Push Container Image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-image'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/cyclone-twin-repo/backend:$COMMIT_SHA'
+
+  # Step 4: Deploy Container Image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-cloud-run'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'cyclone-twin-backend'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/cyclone-twin-repo/backend:$COMMIT_SHA'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=GCP_PROJECT_ID=$PROJECT_ID,FIRESTORE_COLLECTION=disaster_states,GCS_BUCKET_NAME=$PROJECT_ID-media,BIGQUERY_DATASET=cyclone_twin_telemetry'
+
+  # Step 5: Build Frontend Bundle
+  - name: 'node:20-slim'
+    id: 'build-frontend'
+    dir: 'frontend'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        npm ci
+        npm run lint
+        npm run build
+
+  # Step 6: Deploy to Firebase Hosting
+  - name: 'gcr.io/$PROJECT_ID/firebase'
+    id: 'deploy-firebase-hosting'
+    args:
+      - 'deploy'
+      - '--only'
+      - 'hosting'
+      - '--project'
+      - '$PROJECT_ID'
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/cyclone-twin-repo/backend:$COMMIT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/cyclone-twin-repo/backend:latest'
+
+timeout: '1200s'

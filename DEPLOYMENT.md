@@ -1,94 +1,110 @@
 # Cyclone Twin — Production Deployment Guide
-**Target Architecture:** Vercel (Frontend) + Render (Backend)  
-**Cloud Status:** **AWS: NOT USED**
+**Target Architecture:** Firebase Hosting (Frontend) + Google Cloud Run (Backend) + Firestore + GCS + BigQuery  
+**Secondary Targets:** Vercel (Frontend) + Render (Backend)
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│               REACT / VITE WEB CLIENT                   │
-│               Hosted on Vercel Edge                     │
-│               URL: https://cyclone-twin.vercel.app      │
-└───────────────────────────┬─────────────────────────────┘
-                            │ HTTPS (REST / GeoJSON)
-                            ▼
-┌─────────────────────────────────────────────────────────┐
-│               FASTAPI NETWORK ENGINE                    │
-│               Hosted on Render Web Service              │
-│               URL: https://cyclone-twin-backend.onrender.com │
-└─────────────────────────────────────────────────────────┘
+Firebase Hosting
+       │
+       ▼
+React/Vite Frontend
+       │
+       ▼
+Google Cloud Run (Containerized FastAPI)
+ ┌─────┼──────────────┐
+ ▼     ▼              ▼
+Firestore  BigQuery  Cloud Storage
+                         │
+                         ▼
+                    Gemini /
+                    Vertex AI
 ```
 
 ---
 
-## 1. Architecture Overview
-- **Frontend:** React 19 + Vite SPA hosted on **Vercel** with global CDN caching.
-- **Backend:** FastAPI + NetworkX + Shapely + GeoPandas hosted on **Render** (Linux Web Service, Python 3.13).
-- **Communication:** Secure HTTPS REST queries and GeoJSON feature transmissions with origin-restricted CORS.
-- **Infrastructure Exclusions:** AWS (S3, ECS, Lambda, CloudFront, Amplify, API Gateway) is **NOT USED**.
+## 1. Primary Google Cloud Architecture
+
+- **Frontend:** React 19 + Vite SPA hosted on **Firebase Hosting** with automatic SSL, global CDN, and `/api/**` rewrites to Cloud Run.
+- **Backend:** Containerized FastAPI + NetworkX + Shapely on **Google Cloud Run** (`asia-south1` or `us-central1`), binding dynamically to `$PORT`.
+- **Database / State:** **Firestore** for disaster state snapshots, active corridor states, and citizen PGIS reports.
+- **Object Storage:** **Google Cloud Storage (GCS)** for multimodal field evidence (photos/audio/notes).
+- **Telemetry & Analytics:** **BigQuery** for streaming operational metrics, corridor clearance logs, and execution variance telemetry.
+- **AI Engine:** **Vertex AI / Gemini 1.5** for multimodal evidence interpretation and advisory generation.
 
 ---
 
-## 2. Backend Deployment on Render
+## 2. Google Cloud Deployment Protocol
 
-### 2.1 Service Specifications
-- **Service Type:** Web Service
-- **Environment:** `Python 3`
-- **Region:** Oregon (US West) or Frankfurt (EU)
-- **Branch:** `main`
+### 2.1 One-Command Automated Deployment (`deploy_gcp.sh`)
+Execute the automated deployment harness script:
+```bash
+./deploy_gcp.sh deploy-all
+```
+
+Or execute granular steps:
+```bash
+./deploy_gcp.sh check            # Validate gcloud, docker, and environment
+./deploy_gcp.sh build            # Build local container image
+./deploy_gcp.sh deploy-backend   # Submit container to Cloud Build and deploy to Cloud Run
+./deploy_gcp.sh deploy-frontend  # Build Vite frontend and deploy to Firebase Hosting
+```
+
+### 2.2 Manual Deployment Steps
+
+#### Step 1: Deploy Backend to Google Cloud Run
+```bash
+# 1. Build and push container to Google Container Registry / Artifact Registry
+gcloud builds submit --tag gcr.io/cyclone-twin-gcc/cyclone-twin-backend:latest .
+
+# 2. Deploy to Cloud Run
+gcloud run deploy cyclone-twin-backend \
+    --image gcr.io/cyclone-twin-gcc/cyclone-twin-backend:latest \
+    --platform managed \
+    --region asia-south1 \
+    --allow-unauthenticated \
+    --set-env-vars "GCP_PROJECT_ID=cyclone-twin-gcc,GCS_BUCKET_NAME=cyclone-twin-gcc-media" \
+    --port 8080
+```
+
+#### Step 2: Deploy Frontend to Firebase Hosting
+```bash
+# 1. Build Vite production bundle
+cd frontend && npm run build && cd ..
+
+# 2. Deploy static site and rewrite rules
+firebase deploy --only hosting --project cyclone-twin-gcc
+```
+
+### 2.3 Cloud Build CI/CD Pipeline (`cloudbuild.yaml`)
+Submitting a build to Cloud Build runs automated test verification prior to deployment:
+```bash
+gcloud builds submit --config cloudbuild.yaml
+```
+
+---
+
+## 3. GCP Infrastructure Fallback & Resilience
+The backend features an automatic **Local Fallback Mode**:
+- If `GCP_PROJECT_ID` or GCP SDK credentials are absent, `GCPFoundationService` operates with zero-downtime in-memory fallback buffers.
+- Endpoints `GET /gcp/status`, `POST /gcp/snapshot`, and `POST /gcp/log-event` report active connectivity manifest and fallback statistics.
+
+---
+
+## 4. Alternative Deployments (Vercel & Render)
+
+### Render (Backend)
 - **Build Command:** `pip install -r requirements.txt`
 - **Start Command:** `uvicorn cyclone_twin.main:app --host 0.0.0.0 --port $PORT`
-- **Health Check Path:** `/`
+- **Persistent Storage Mount:** Attach Render Persistent Disk at `/var/data` (1 GB)
+- **Environment Variables:**
+  - `CYCLONE_TWIN_DB_PATH=/var/data/cyclone_twin_state.db`
+  - `CYCLONE_TWIN_PERSISTENCE=sqlite`
+  - `ALLOWED_ORIGINS=https://frontend-woad-iota-23.vercel.app,https://cyclone-twin.vercel.app,http://localhost:5173`
+- **Durability Guarantee:** Single-instance SQLite storage on attached volume `/var/data`. Preserves scenario snapshots, citizen observations, interventions, and operational audit log across instance restarts and deployments. Derived accessibility and ranking outputs are recomputed deterministically upon rehydration.
 
-### 2.2 Environment Variables (Render Dashboard)
-| Variable | Value | Description |
-| :--- | :--- | :--- |
-| `PYTHON_VERSION` | `3.13.0` | Python runtime version. |
-| `ALLOWED_ORIGINS` | `https://cyclone-twin.vercel.app,http://localhost:5173,http://localhost:5174` | Allowed CORS origins (regex matches `*.vercel.app`). |
-| `GEMINI_API_KEY` | *(Secret)* | Optional Gemini API key for dynamic advisory text. Falls back to deterministic rule engine if unset. |
-
-### 2.3 Blueprint Deployment (`render.yaml`)
-Alternatively, deploy using the included [`render.yaml`](file:///Users/shriram/Documents/Projects/Cyclone-Twin-Critical-Access-Restoration-Engine/render.yaml) by connecting the repository as a **Render Blueprint**.
-
----
-
-## 3. Frontend Deployment on Vercel
-
-### 3.1 Project Settings
-- **Framework Preset:** `Vite`
+### Vercel (Frontend)
 - **Root Directory:** `frontend`
 - **Build Command:** `npm run build`
-- **Output Directory:** `dist`
-- **Node.js Version:** `20.x` or `22.x`
-
-### 3.2 Environment Variables (Vercel Dashboard)
-| Variable | Value | Description |
-| :--- | :--- | :--- |
-| `VITE_API_BASE_URL` | `https://cyclone-twin-backend.onrender.com` | Public HTTPS endpoint of the deployed Render backend. |
-
-### 3.3 Routing Configuration (`vercel.json`)
-SPA route handling is configured via [`frontend/vercel.json`](file:///Users/shriram/Documents/Projects/Cyclone-Twin-Critical-Access-Restoration-Engine/frontend/vercel.json) to route client-side paths to `index.html`.
-
----
-
-## 4. Step-by-Step Deployment Protocol
-
-### Step 1: Deploy Backend to Render
-1. In Render Dashboard, click **New +** $\rightarrow$ **Web Service**.
-2. Select the GitHub repository `Cyclone-Twin-Critical-Access-Restoration-Engine`.
-3. Set Build Command to `pip install -r requirements.txt`.
-4. Set Start Command to `uvicorn cyclone_twin.main:app --host 0.0.0.0 --port $PORT`.
-5. Add environment variables: `PYTHON_VERSION=3.13.0` and `ALLOWED_ORIGINS=https://cyclone-twin.vercel.app`.
-6. Click **Deploy**. Note the assigned URL (e.g. `https://cyclone-twin-backend.onrender.com`).
-
-### Step 2: Deploy Frontend to Vercel
-1. In Vercel Dashboard, click **Add New Project**.
-2. Select the repository and choose root directory `frontend`.
-3. Under Environment Variables, set `VITE_API_BASE_URL` to your Render backend URL.
-4. Click **Deploy**. Note the assigned Vercel URL (e.g. `https://cyclone-twin.vercel.app`).
-
-### Step 3: Verify Cross-Origin Communication
-1. Open the Vercel URL in Chrome.
-2. Confirm the map loads and displays the baseline network from Render.
-3. Open Chrome DevTools $\rightarrow$ **Network tab** to verify requests to `https://<render-url>/map/data` return `200 OK`.
+- **Environment Variable:** `VITE_API_BASE_URL=https://cyclone-twin-backend.onrender.com`
 
 ---
 
@@ -96,7 +112,8 @@ SPA route handling is configured via [`frontend/vercel.json`](file:///Users/shri
 
 | Endpoint | Method | Expected Output | Verification |
 | :--- | :--- | :--- | :--- |
-| `GET /` | Health | `{"status":"online","system":"Cyclone Twin"}` | Render Liveness |
+| `GET /` | Health | `{"status":"online","system":"Cyclone Twin"}` | Backend Liveness |
+| `GET /gcp/status` | Infrastructure | `{"status":"HEALTHY","target_architecture":{...}}` | GCP Manifest |
 | `POST /network/load` | Graph Init | `{"nodes":25,"edges":56}` | Graph Initialized |
 | `POST /flood/apply` | Disruption | `{"disabled_edges":20,"corridors":3}` | Flood Applied |
 | `GET /accessibility/status` | Invariants | `{"accessible_population":298000}` | Dijkstra Engine Active |

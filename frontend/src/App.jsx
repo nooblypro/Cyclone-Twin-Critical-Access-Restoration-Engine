@@ -721,6 +721,16 @@ export default function CycloneTwinApp() {
     };
   }, []);
 
+  // Handle viewMode transitions & Leaflet map container resizing
+  useEffect(() => {
+    if (viewMode === "COMMAND_CENTER" && mapInstanceRef.current) {
+      const timer = setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [viewMode]);
+
   // 3. Leaflet Vector Layer Render & Synchronization
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -1751,8 +1761,16 @@ export default function CycloneTwinApp() {
         </div>
       )}
 
-      {viewMode === "FIELD_MODE" ? (
-        <main className="gis-workspace" style={{ padding: "16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "16px" }}>
+      <main
+        className="gis-workspace"
+        style={{
+          padding: "16px",
+          overflowY: "auto",
+          display: viewMode === "FIELD_MODE" ? "flex" : "none",
+          flexDirection: "column",
+          gap: "16px",
+        }}
+      >
           {/* Connectivity Status Banner */}
           <div
             style={{
@@ -2054,8 +2072,13 @@ export default function CycloneTwinApp() {
             </div>
           </div>
         </main>
-      ) : (
-        <main className="gis-workspace">
+
+        <main
+          className="gis-workspace"
+          style={{
+            display: viewMode === "COMMAND_CENTER" ? "grid" : "none",
+          }}
+        >
         {/* LEFT EDITORIAL SIDEBAR */}
         <aside className="gis-sidebar-left">
           <div className="panel-content">
@@ -2667,7 +2690,6 @@ export default function CycloneTwinApp() {
           </div>
         </aside>
         </main>
-      )}
 
 
       {/* 4. MODAL SPECIFICATION DIALOG */}

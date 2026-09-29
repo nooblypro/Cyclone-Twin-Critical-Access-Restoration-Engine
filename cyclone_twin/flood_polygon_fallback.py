@@ -15,6 +15,14 @@ def normalize_polygon_geometry(geom: Any) -> Polygon | MultiPolygon:
     Normalizes and repairs arbitrary or invalid geometries.
     TEST 17: make_valid() GeometryCollection normalization retains polygonal components only.
     """
+    if isinstance(geom, dict):
+        if geom.get("type") == "Feature":
+            geom = shape(geom["geometry"])
+        elif "geometry" in geom:
+            geom = shape(geom["geometry"])
+        else:
+            geom = shape(geom)
+
     if not geom.is_valid:
         geom = make_valid(geom)
 

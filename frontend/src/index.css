@@ -1,52 +1,49 @@
 /* ==========================================================================
    CYCLONE TWIN — MUNICIPAL EMERGENCY OPERATIONS CONSOLE
-   Visual Design System v2: Professional Emergency GIS Command Console
+   Human-Designed Product Interface (Restrained GIS & Emergency Decision Support)
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  /* Typography */
-  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-body: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  /* Restrained Professional UI Font Stack */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, monospace;
 
-  /* Color Palette — Restrained Dark Operational Theme */
-  --bg-app: #070c18;
-  --bg-header: #091020;
-  --bg-panel: #0b1326;
-  --bg-card: #0f1a34;
-  --bg-card-hover: #142244;
-  --bg-input: #121e3a;
+  /* Restrained Professional Palette (Slate / Graphite) */
+  --bg-app: #0f172a;
+  --bg-header: #0f172a;
+  --bg-panel: #1e293b;
+  --bg-subtle: #1e293b;
+  --bg-card: #1e293b;
+  --bg-hover: rgba(255, 255, 255, 0.04);
+  --bg-code: #0f172a;
 
-  --border-subtle: #182848;
-  --border-strong: #223862;
-  --border-focus: #3b82f6;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
 
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
 
-  /* Semantic State Colors */
-  --accent-cyan: #06b6d4;
-  --accent-cyan-dim: rgba(6, 182, 212, 0.12);
-  --accent-blue: #3b82f6;
-  --status-green: #10b981;
-  --status-green-dim: rgba(16, 185, 129, 0.15);
-  --status-red: #ef4444;
-  --status-red-dim: rgba(239, 68, 68, 0.15);
-  --status-amber: #f59e0b;
-  --status-amber-dim: rgba(245, 158, 11, 0.15);
+  /* State Colors (Used strictly for operational state) */
+  --color-danger: #ef4444;
+  --color-danger-muted: #f87171;
+  --color-success: #10b981;
+  --color-success-muted: #34d399;
+  --color-active: #3b82f6;
+  --color-active-muted: #60a5fa;
+  --color-warning: #f59e0b;
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  /* Transitions */
+  --transition: 0.15s ease;
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-font-smoothing: antialiased;
 }
 
 html, body, #root {
@@ -55,32 +52,33 @@ html, body, #root {
   min-height: 100vh;
   background-color: var(--bg-app);
   color: var(--text-primary);
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.5;
   overflow: hidden;
-  -webkit-font-smoothing: antialiased;
 }
 
 .tabular-nums {
-  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
-/* Master Layout */
-.gis-command-console {
+/* Master Console Layout */
+.gis-console {
   display: flex;
   flex-direction: column;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background-color: var(--bg-app);
+  background: var(--bg-app);
 }
 
-/* 1. TOP HEADER */
+/* ==========================================================================
+   1. HEADER
+   ========================================================================== */
 .gis-header {
-  height: 48px;
-  min-height: 48px;
+  height: 44px;
+  min-height: 44px;
   background: var(--bg-header);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
@@ -90,842 +88,429 @@ html, body, #root {
   z-index: 100;
 }
 
-.gis-header-left {
+.header-brand {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.brand-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
-  background: var(--accent-cyan-dim);
-  border: 1px solid rgba(6, 182, 212, 0.3);
-}
-
-.brand-heading {
+.brand-title {
   font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
+  font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.1;
+  letter-spacing: -0.01em;
 }
 
-.brand-subheading {
-  font-size: 10px;
-  font-weight: 500;
+.brand-subtitle {
+  font-size: 11.5px;
   color: var(--text-muted);
-  letter-spacing: 0.3px;
+  font-weight: 400;
 }
 
-.gis-header-center {
-  display: flex;
-  align-items: center;
-}
-
-.status-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  background: rgba(15, 26, 52, 0.8);
-  border: 1px solid var(--border-strong);
-  color: var(--text-secondary);
-}
-
-.status-pill.base {
-  border-color: var(--border-strong);
-  color: var(--text-secondary);
-}
-
-.status-pill.flooded {
-  border-color: rgba(239, 68, 68, 0.4);
-  background: var(--status-red-dim);
-  color: #fca5a5;
-}
-
-.status-pill.ranked,
-.status-pill.selected {
-  border-color: rgba(6, 182, 212, 0.4);
-  background: var(--accent-cyan-dim);
-  color: #a5f3fc;
-}
-
-.status-pill.cleared {
-  border-color: rgba(16, 185, 129, 0.4);
-  background: var(--status-green-dim);
-  color: #6ee7b7;
-}
-
-.status-dot {
-  font-size: 9px;
-}
-
-.gis-header-right {
+.header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.gis-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+.btn-quiet {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
   border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-  border: 1px solid transparent;
-  outline: none;
+  transition: var(--transition);
 }
 
-.gis-btn.primary {
-  background: var(--accent-cyan);
-  color: #040812;
-  border-color: var(--accent-cyan);
-  font-weight: 700;
-}
-
-.gis-btn.primary:hover:not(:disabled) {
-  background: #22d3ee;
-}
-
-.gis-btn.secondary {
-  background: var(--bg-card);
+.btn-quiet:hover {
   color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
   border-color: var(--border-strong);
 }
 
-.gis-btn.secondary:hover:not(:disabled) {
-  background: var(--bg-card-hover);
-  border-color: var(--border-focus);
+.btn-primary {
+  background: var(--color-active);
+  border: 1px solid var(--color-active);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: var(--transition);
 }
 
-.gis-btn.tertiary {
-  background: transparent;
-  color: var(--text-secondary);
-  border-color: transparent;
+.btn-primary:hover:not(:disabled) {
+  background: #2563eb;
+  border-color: #2563eb;
 }
 
-.gis-btn.tertiary:hover:not(:disabled) {
-  background: var(--bg-card);
-  color: var(--text-primary);
-}
-
-.gis-btn:disabled {
-  opacity: 0.45;
+.btn-quiet:disabled,
+.btn-secondary:disabled,
+.btn-primary:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
-/* 2. SCENARIO PROGRESSION PIPELINE */
-.gis-stepper {
+/* ==========================================================================
+   2. SCENARIO STEP NAVIGATION (QUIET HORIZONTAL FLOW)
+   ========================================================================== */
+.gis-nav-stepper {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   background: var(--bg-app);
   border-bottom: 1px solid var(--border-subtle);
-  padding: 6px 16px;
-  gap: 8px;
+  padding: 0 16px;
+  gap: 24px;
+  height: 32px;
+  min-height: 32px;
 }
 
-.stepper-node {
-  flex: 1;
+.stepper-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 10px;
-  border-radius: 4px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-subtle);
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  padding: 6px 0;
+  border-bottom: 2px solid transparent;
+  transition: var(--transition);
   user-select: none;
 }
 
-.stepper-node:hover {
-  background: var(--bg-card);
-  border-color: var(--border-strong);
-}
-
-.stepper-node.active {
-  background: rgba(6, 182, 212, 0.08);
-  border-color: rgba(6, 182, 212, 0.5);
-}
-
-.stepper-node.completed {
-  border-color: rgba(16, 185, 129, 0.3);
-  background: rgba(16, 185, 129, 0.05);
-}
-
-.stepper-badge {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  background: var(--bg-card);
-  color: var(--text-muted);
-  border: 1px solid var(--border-subtle);
-}
-
-.stepper-node.active .stepper-badge {
-  background: var(--accent-cyan);
-  color: #040812;
-  border-color: var(--accent-cyan);
-}
-
-.stepper-node.completed .stepper-badge {
-  background: var(--status-green);
-  color: #040812;
-  border-color: var(--status-green);
-}
-
-.stepper-text {
-  font-size: 11px;
-  font-weight: 600;
+.stepper-item:hover {
   color: var(--text-secondary);
-  white-space: nowrap;
 }
 
-.stepper-node.active .stepper-text {
+.stepper-item.active {
   color: var(--text-primary);
+  font-weight: 600;
+  border-bottom-color: var(--color-active);
+}
+
+.stepper-item.completed {
+  color: var(--text-secondary);
+}
+
+.step-num {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.stepper-item.active .step-num {
+  color: var(--color-active-muted);
+}
+
+.stepper-item.completed .step-num {
+  color: var(--color-success-muted);
 }
 
 /* Error Banner */
 .gis-error-banner {
-  background: var(--status-red-dim);
-  border-bottom: 1px solid rgba(239, 68, 68, 0.4);
-  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--color-danger-muted);
   padding: 6px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-size: 12px;
-  font-weight: 500;
 }
 
 .error-close {
   background: none;
   border: none;
-  color: #fca5a5;
+  color: var(--color-danger-muted);
   cursor: pointer;
 }
 
-/* 3. THREE-PANE GIS WORKSPACE */
+/* ==========================================================================
+   3. THREE-PANE WORKSPACE
+   ========================================================================== */
 .gis-workspace {
   flex: 1;
   display: grid;
-  grid-template-columns: 290px 1fr 360px;
-  height: calc(100vh - 48px - 38px - 24px);
+  grid-template-columns: 270px 1fr 340px;
+  height: calc(100vh - 44px - 32px);
   overflow: hidden;
   background: var(--bg-app);
 }
 
-/* Left & Right Panels */
-.gis-left-panel,
-.gis-right-panel {
+/* Left & Right Sidebar Panels */
+.gis-sidebar-left,
+.gis-sidebar-right {
   background: var(--bg-panel);
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
 
-.gis-left-panel {
+.gis-sidebar-left {
   border-right: 1px solid var(--border-subtle);
 }
 
-.gis-right-panel {
+.gis-sidebar-right {
   border-left: 1px solid var(--border-subtle);
 }
 
-.panel-scroll-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 14px;
+.panel-content {
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 
-.panel-scroll-content::-webkit-scrollbar {
-  width: 5px;
-}
-.panel-scroll-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-.panel-scroll-content::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-  border-radius: 4px;
-}
-
-/* Panel Sections & Section Headers */
-.panel-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.section-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-/* Left Panel Impact Metric Boxes */
-.metric-box-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.metric-box {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 4px;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.metric-box.danger-box {
-  border-color: rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.04);
-}
-
-.metric-box.recovery-box {
-  border-color: rgba(16, 185, 129, 0.3);
-  background: rgba(16, 185, 129, 0.04);
-}
-
-.box-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.box-number {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--text-primary);
-  line-height: 1.2;
-}
-
-.box-sub {
+.panel-section-title {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.decision-section-label {
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--text-muted);
 }
 
-.box-caption {
-  font-size: 10.5px;
-  color: var(--text-muted);
-  font-weight: 500;
+.directive-plain-block {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  border-left: 2px solid var(--color-active);
+  padding: 2px 0 2px 10px;
 }
 
-.bar-track {
-  width: 100%;
-  height: 5px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
-  overflow: hidden;
+/* Score Breakdown List */
+.score-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11.5px;
+}
+
+.score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-secondary);
+}
+
+.score-val {
+  font-weight: 600;
+}
+
+.formula-subtext {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
   margin-top: 4px;
 }
 
-.bar-fill.green {
-  height: 100%;
-  background: var(--status-green);
-  transition: width 0.3s ease;
-}
-
-/* Cartography Layer List */
-.gis-layers-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.gis-layer-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 6px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.15s ease;
-  user-select: none;
-}
-
-.gis-layer-item:hover {
-  background: var(--bg-card);
-}
-
-.gis-checkbox {
-  accent-color: var(--accent-cyan);
-  cursor: pointer;
-  width: 13px;
-  height: 13px;
-}
-
-.gis-swatch-slot {
-  width: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.gis-swatch-tag {
-  width: 14px;
-  height: 4px;
-  border-radius: 2px;
-  display: block;
-}
-
-.gis-dot-tag {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: 1.5px solid #fff;
-  display: block;
-}
-
-.gis-icon-tag {
-  width: 14px;
-  height: 14px;
-  border-radius: 2px;
-  color: #fff;
-  font-weight: 800;
-  font-size: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.gis-layer-name {
-  font-size: 11px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-/* CENTER MAP SURFACE */
-.gis-center-map {
+/* ==========================================================================
+   MAP VIEWPORT & CARTO TILE VISIBILITY
+   ========================================================================== */
+.gis-map-viewport {
   position: relative;
   width: 100%;
   height: 100%;
-  background: #e2e8f0;
-  overflow: hidden;
+  background: #0f172a;
 }
 
-.gis-leaflet-container {
+.gis-leaflet-canvas {
   width: 100%;
   height: 100%;
-  background: #e5e7eb;
+  background: #0f172a;
 }
 
-/* Map Controls */
-.gis-map-controls {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  z-index: 500;
+/* Crisp & Clear Cartographic Tile Presentation */
+.gis-leaflet-canvas .leaflet-tile-container img {
+  filter: brightness(0.92) contrast(1.05);
 }
 
-.gis-ctrl-btn {
-  width: 28px;
-  height: 28px;
-  background: var(--bg-header);
-  border: 1px solid var(--border-strong);
-  border-radius: 4px;
-  color: var(--text-primary);
-  font-size: 15px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: var(--shadow-md);
-  transition: all 0.15s ease;
+/* Cartographic Tooltip */
+.gis-carto-tooltip {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 4px !important;
+  color: #f8fafc !important;
+  font-family: var(--font-sans) !important;
+  font-size: 11.5px !important;
+  padding: 5px 9px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
 }
 
-.gis-ctrl-btn:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--accent-cyan);
-  color: var(--accent-cyan);
-}
-
-/* Integrated Bottom Scenario Timeline */
-.gis-bottom-timeline {
-  position: absolute;
-  bottom: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(9, 16, 32, 0.94);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border-strong);
-  padding: 5px 10px;
-  border-radius: 6px;
-  box-shadow: var(--shadow-lg);
-  z-index: 500;
-}
-
-.timeline-tag {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: var(--text-muted);
-}
-
-.timeline-buttons-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.timeline-segment-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 11px;
+.gis-carto-tooltip strong {
+  color: var(--color-active-muted);
   font-weight: 600;
-  background: var(--bg-card);
+}
+
+/* Quiet Floating Map Controls */
+.map-quiet-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 2px;
+  z-index: 500;
+}
+
+.map-btn {
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: none;
   color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.timeline-segment-btn:hover {
-  background: var(--bg-card-hover);
-  color: var(--text-primary);
-}
-
-.timeline-segment-btn.active {
-  background: var(--accent-cyan-dim);
-  border-color: rgba(6, 182, 212, 0.5);
-  color: var(--text-primary);
-}
-
-.step-num {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  display: inline-flex;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
-  font-weight: 700;
-}
-
-.check-icon {
-  color: var(--status-green);
-}
-
-/* RIGHT OPERATIONS PANEL */
-.decision-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 4px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.card-top-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.card-category {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  color: var(--text-muted);
-}
-
-.priority-tag {
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  padding: 2px 6px;
+  cursor: pointer;
   border-radius: 3px;
-  background: rgba(6, 182, 212, 0.15);
-  border: 1px solid rgba(6, 182, 212, 0.4);
-  color: var(--accent-cyan);
+  transition: var(--transition);
 }
 
-.simulated-tag {
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  padding: 2px 6px;
-  border-radius: 3px;
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  color: #fbbf24;
-}
-
-.corridor-heading {
-  font-size: 13.5px;
-  font-weight: 700;
+.map-btn:hover {
+  background: var(--bg-hover);
   color: var(--text-primary);
-  line-height: 1.2;
 }
 
-.corridor-descriptor {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-/* Dominant Operational Metrics Grid */
-.dominant-metrics-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.dominant-stat {
-  background: rgba(7, 12, 24, 0.6);
-  border: 1px solid var(--border-subtle);
-  border-radius: 4px;
-  padding: 8px 10px;
-  display: flex;
-  flex-direction: column;
-}
-
-.stat-large {
-  font-size: 20px;
-  font-weight: 800;
-  line-height: 1.15;
-}
-
-.stat-desc {
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-
-/* Population Access Bar Chart */
-.chart-legend-line {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 10px;
-  color: var(--text-secondary);
-}
-
-.legend-indicator {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-}
-
-.legend-indicator.accessible {
-  background: var(--status-green);
-}
-
-.legend-indicator.isolated {
-  background: var(--status-red);
-}
-
-.access-chart {
+/* Custom Layer Checkboxes */
+.layers-control-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 4px;
 }
 
-.chart-bar-row {
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.layer-checkbox {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  display: grid;
+  place-content: center;
+  transition: var(--transition);
+}
+
+.layer-checkbox:checked {
+  background: var(--color-active);
+  border-color: var(--color-active);
+}
+
+.layer-checkbox:checked::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  background-color: #ffffff;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+
+.layer-name {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.telemetry-row {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.bar-row-label {
-  font-size: 10.5px;
+.telemetry-caption {
+  font-size: 11.5px;
   color: var(--text-muted);
   font-weight: 500;
 }
 
-.bar-row-track {
-  width: 100%;
-  height: 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 3px;
-  display: flex;
-  overflow: hidden;
-  font-size: 9.5px;
+.telemetry-val-large {
+  font-size: 26px;
   font-weight: 700;
-  color: #fff;
-  line-height: 16px;
-}
-
-.segment.accessible {
-  background: var(--status-green);
-  text-align: center;
-  padding-left: 4px;
-}
-
-.segment.isolated {
-  background: var(--status-red);
-  text-align: center;
-  padding-right: 4px;
-}
-
-/* Why This Matters */
-.impact-paragraph {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-.impact-paragraph strong {
+  line-height: 1.1;
   color: var(--text-primary);
-  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
-/* Operational Directive */
-.directive-box {
-  background: rgba(245, 158, 11, 0.04);
-  border-color: rgba(245, 158, 11, 0.25);
+.telemetry-val-large.danger {
+  color: var(--color-danger-muted);
 }
 
-.directive-text {
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: #fde68a;
-  font-family: var(--font-mono);
+.telemetry-val-large.success {
+  color: var(--color-success-muted);
 }
 
-/* Score Breakdown */
-.final-score {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--accent-cyan);
-}
-
-.score-components-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-
-.score-slot {
-  background: rgba(7, 12, 24, 0.6);
-  border: 1px solid var(--border-subtle);
-  border-radius: 3px;
-  padding: 6px 8px;
-  display: flex;
-  flex-direction: column;
-}
-
-.slot-name {
-  font-size: 10px;
+.telemetry-subtext {
+  font-size: 11px;
   color: var(--text-muted);
 }
 
-.slot-val {
-  font-size: 12px;
-  font-weight: 700;
-  margin-top: 1px;
+.divider-line {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 2px 0;
 }
 
-.formula-caption {
-  font-size: 9.5px;
-  font-family: var(--font-mono);
-  color: var(--text-muted);
-  text-align: center;
+.bar-track-thin {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
   margin-top: 4px;
 }
 
-/* Text Colors */
-.green-text {
-  color: var(--status-green);
+.bar-fill-thin {
+  height: 100%;
+  background: var(--color-success);
+  transition: width 0.4s ease;
 }
 
-.cyan-text {
-  color: var(--accent-cyan);
-}
-
-.danger-text {
-  color: var(--status-red);
-}
-
-.text-cyan {
-  color: var(--accent-cyan);
-}
-
-/* 4. TECHNICAL FOOTER */
-.gis-footer {
-  height: 24px;
-  min-height: 24px;
-  background: var(--bg-header);
-  border-top: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  font-size: 10px;
-  color: var(--text-muted);
-  font-weight: 500;
-  z-index: 100;
-}
-
-.footer-left-text {
-  letter-spacing: 0.5px;
-  font-family: var(--font-mono);
-}
-
-.footer-right-text {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-family: var(--font-mono);
-}
-
-.green-dot {
-  color: var(--status-green);
-  font-size: 8px;
-}
-
-/* 5. MODAL */
+/* ==========================================================================
+   7. MODAL DIALOG
+   ========================================================================== */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(4, 8, 18, 0.75);
+  background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -934,130 +519,89 @@ html, body, #root {
   padding: 20px;
 }
 
-.modal-window {
+.modal-dialog {
   width: 100%;
-  max-width: 580px;
+  max-width: 520px;
   background: var(--bg-panel);
   border: 1px solid var(--border-strong);
   border-radius: 6px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.modal-top {
+.modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: var(--bg-header);
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.modal-title {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: var(--text-primary);
-}
-
-.modal-nav {
-  display: flex;
-  background: var(--bg-app);
-  border-bottom: 1px solid var(--border-subtle);
-  padding: 4px 12px;
-  gap: 6px;
-}
-
-.tab-btn {
-  background: none;
-  border: 1px solid transparent;
-  padding: 5px 10px;
-  border-radius: 4px;
-  font-size: 11px;
+.modal-heading {
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.tab-btn:hover {
   color: var(--text-primary);
 }
 
-.tab-btn.active {
-  background: var(--bg-card);
-  border-color: var(--border-subtle);
-  color: var(--accent-cyan);
+.modal-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-app);
 }
 
-.modal-body-area {
+.modal-tab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: var(--transition);
+}
+
+.modal-tab-btn:hover {
+  color: var(--text-secondary);
+}
+
+.modal-tab-btn.active {
+  color: var(--text-primary);
+  font-weight: 600;
+  border-bottom-color: var(--color-active);
+}
+
+.modal-body {
   padding: 16px;
-  max-height: 380px;
+  max-height: 360px;
   overflow-y: auto;
 }
 
-.spec-table {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 4px;
-  padding: 8px 12px;
+.spec-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 8px;
   font-size: 11px;
-  color: var(--text-secondary);
+  background: var(--bg-app);
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  margin-top: 10px;
 }
 
-.spec-table code {
-  color: var(--accent-cyan);
-  font-family: var(--font-mono);
-}
-
-.modal-bottom {
+.modal-footer {
   padding: 10px 16px;
-  background: var(--bg-header);
   border-top: 1px solid var(--border-subtle);
   display: flex;
   justify-content: flex-end;
 }
 
-/* Custom Leaflet Map Tooltips & Overlays */
-.custom-map-icon {
-  background: transparent;
-  border: none;
-}
-
-.leaflet-tooltip.gis-tooltip {
-  background: rgba(7, 12, 24, 0.92);
-  border: 1px solid var(--border-strong);
-  color: var(--text-primary);
-  font-family: var(--font-body);
-  font-size: 11px;
-  border-radius: 4px;
-  padding: 4px 8px;
-  box-shadow: var(--shadow-md);
-}
-
-.leaflet-tooltip-top.gis-tooltip:before {
-  border-top-color: var(--border-strong);
-}
-
-/* Responsive Adjustments */
-@media (max-width: 1440px) {
-  .gis-workspace {
-    grid-template-columns: 270px 1fr 340px;
-  }
-}
-
+/* Responsive Queries */
 @media (max-width: 1280px) {
   .gis-workspace {
-    grid-template-columns: 250px 1fr 320px;
-  }
-  .box-number {
-    font-size: 18px;
-  }
-  .stat-large {
-    font-size: 18px;
+    grid-template-columns: 240px 1fr 300px;
   }
 }

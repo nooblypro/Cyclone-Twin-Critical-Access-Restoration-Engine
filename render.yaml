@@ -7,10 +7,19 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn cyclone_twin.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /
+    disk:
+      name: cyclone-twin-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
         value: 3.13.0
       - key: ALLOWED_ORIGINS
-        value: https://cyclone-twin.vercel.app,http://localhost:5173,http://localhost:5174
+        value: https://cyclone-twin.vercel.app,http://localhost:5173,http://localhost:5174,https://frontend-woad-iota-23.vercel.app
+      - key: CYCLONE_TWIN_DB_PATH
+        value: /var/data/cyclone_twin_state.db
+      - key: CYCLONE_TWIN_PERSISTENCE
+        value: sqlite
       - key: GEMINI_API_KEY
         sync: false
+

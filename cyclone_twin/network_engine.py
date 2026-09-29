@@ -16,15 +16,26 @@ class NetworkEngine:
     Dijkstra travel times on forward and reversed graphs, and guards against parallel edge traps.
     """
 
-    def __init__(self, graph: Optional[nx.MultiDiGraph] = None):
+    def __init__(
+        self,
+        graph: Optional[nx.MultiDiGraph] = None,
+        travel_time_model: Optional[Any] = None,
+    ):
+        from cyclone_twin.providers.travel_time_model import StaticTravelTimeModel
         self.graph: nx.MultiDiGraph = nx.MultiDiGraph()
         self.disabled_segments: Set[str] = set()
         self.valid_segment_ids: Set[str] = set()
         self.segment_to_edges: Dict[str, List[Tuple[str, str, int]]] = {}
         self.edge_to_segment: Dict[Tuple[str, str, int], str] = {}
+        self.travel_time_model = travel_time_model or StaticTravelTimeModel()
 
         if graph is not None:
             self.set_graph(graph)
+
+    def set_travel_time_model(self, model: Optional[Any]) -> None:
+        """Sets active TravelTimeModel (StaticTravelTimeModel or BPRCapacityTravelTimeModel)."""
+        from cyclone_twin.providers.travel_time_model import StaticTravelTimeModel
+        self.travel_time_model = model or StaticTravelTimeModel()
 
     def set_graph(self, graph: nx.MultiDiGraph) -> None:
         """
@@ -119,9 +130,10 @@ class NetworkEngine:
         """
         Inspects all parallel edges between u and v.
         1. Inspects every parallel edge
-        2. Ignores disabled physical segments
-        3. Chooses minimum active travel_time
-        4. Returns None if every parallel edge is disabled
+        2. Ignores disabled physical segments (flood closures)
+        3. Computes travel time via active TravelTimeModel
+        4. Chooses minimum active travel_time
+        5. Returns None if every parallel edge is disabled
         (TEST 16)
         """
         u_str, v_str = str(u), str(v)
@@ -130,13 +142,29 @@ class NetworkEngine:
                 return None
             edge_dict = self.graph[u_str][v_str]
 
+        from cyclone_twin.providers.travel_time_model import StaticTravelTimeModel, derive_capacity
+
         min_time: Optional[float] = None
         for key, data in edge_dict.items():
             seg_id = data.get("physical_segment_id") or self.edge_to_segment.get((u_str, v_str, key))
             if seg_id in self.disabled_segments:
-                continue  # Disabled segment
+                continue  # Disabled segment (flooded)
 
-            t = float(data.get("travel_time", 0.0))
+            if isinstance(self.travel_time_model, StaticTravelTimeModel):
+                t = float(data.get("travel_time", 0.0))
+            else:
+                length = float(data.get("length", 100.0))
+                speed_kph = float(data.get("speed_kph", 30.0))
+                cap = derive_capacity(data.get("capacity"), data.get("highway"))
+                vol = float(data.get("current_volume", data.get("volume", 0.0)))
+                t = self.travel_time_model.compute_travel_time(
+                    length_m=length,
+                    free_flow_speed_kph=speed_kph,
+                    capacity=cap,
+                    volume=vol,
+                    is_disabled=False,
+                )
+
             if min_time is None or t < min_time:
                 min_time = t
 
