@@ -318,7 +318,7 @@ export default function CycloneTwinApp() {
   // Phase K Intervention Execution & Outcome Tracking State
   const [activeIntervention, setActiveIntervention] = useState(null);
   const [_interventionsList, setInterventionsList] = useState([]);
-  const [_assignedTeamInput, _setAssignedTeamInput] = useState("FIELD-TEAM-03");
+  const [assignedTeamInput, _setAssignedTeamInput] = useState("FIELD-TEAM-03");
 
   // Phase L1-L6 Forecast Timeline & Vulnerability State
   const [selectedHorizon, setSelectedHorizon] = useState("NOW"); // "NOW" | "+2H" | "+4H" | "+8H"
@@ -2380,26 +2380,90 @@ export default function CycloneTwinApp() {
               ) : (
                 /* CRITICALITY & RECOVERY STATE */
                 <>
-                  <div className="decision-hero-section">
-                    <span className="decision-section-label">
-                      {systemState === "CLEARED" ? "Restored corridor" : "Selected candidate corridor"}
-                    </span>
-                    <h3 className="decision-title">Saidapet → Adyar Lifeline</h3>
+                  <div className="decision-hero-section" style={{ marginBottom: "10px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span className="decision-section-label">
+                        {systemState === "CLEARED" ? "Restored corridor" : "Criticality Assessment"}
+                      </span>
+                      <button
+                        onClick={handleRankCorridors}
+                        disabled={loading}
+                        style={{
+                          background: "rgba(56, 189, 248, 0.15)",
+                          color: "#38bdf8",
+                          border: "1px solid rgba(56, 189, 248, 0.4)",
+                          padding: "3px 8px",
+                          borderRadius: "4px",
+                          fontSize: "10.5px",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        ⚡ {rankedCorridors?.length > 0 ? "RE-RANK CORRIDORS" : "RANK CRITICAL CORRIDORS"}
+                      </button>
+                    </div>
+                    <h3 className="decision-title">
+                      {selectedCorridor?.name || selectedCorridor?.corridor_id || "Saidapet → Adyar Lifeline"}
+                    </h3>
                   </div>
+
+                  {rankedCorridors && rankedCorridors.length > 0 && (
+                    <div style={{ marginBottom: "12px" }}>
+                      <span className="decision-section-label" style={{ display: "block", marginBottom: "4px" }}>
+                        Candidate Restoration Corridors
+                      </span>
+                      <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                        {rankedCorridors.map((c, idx) => {
+                          const isSelected = selectedCorridor?.corridor_id === c.corridor_id;
+                          return (
+                            <button
+                              key={c.corridor_id || idx}
+                              onClick={() => handleSelectCorridor(c)}
+                              style={{
+                                flex: 1,
+                                minWidth: "110px",
+                                padding: "6px 8px",
+                                borderRadius: "4px",
+                                border: isSelected ? "1px solid #38bdf8" : "1px solid rgba(255,255,255,0.1)",
+                                background: isSelected ? "rgba(56, 189, 248, 0.2)" : "rgba(255,255,255,0.04)",
+                                color: isSelected ? "#fff" : "var(--text-secondary)",
+                                fontSize: "10.5px",
+                                textAlign: "left",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <div style={{ fontWeight: 700, color: isSelected ? "#38bdf8" : "#e2e8f0" }}>
+                                #{idx + 1} {c.corridor_id}
+                              </div>
+                              <div style={{ fontSize: "9.5px", color: isSelected ? "#34d399" : "#94a3b8" }}>
+                                +{(c.population_recovered || 89000).toLocaleString()} rec.
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="hero-number-block">
                     <span className="hero-number-val tabular-nums" style={{ color: "var(--color-success-muted)" }}>
-                      +89,000
+                      +{(selectedCorridor?.population_recovered || 89000).toLocaleString()}
                     </span>
                     <span className="hero-number-label">residents recovered to trauma care</span>
                   </div>
 
                   <div className="supporting-telemetry-row">
-                    <span className="supporting-item"><strong>22 min</strong> detour saved</span>
+                    <span className="supporting-item">
+                      <strong>{selectedCorridor?.detour_saved_min || 22} min</strong> detour saved
+                    </span>
                     <span>·</span>
-                    <span className="supporting-item"><strong>0.9 km</strong> length</span>
+                    <span className="supporting-item">
+                      <strong>{selectedCorridor?.length_km || 0.9} km</strong> length
+                    </span>
                     <span>·</span>
-                    <span className="supporting-item"><strong>+0.0724</strong> criticality</span>
+                    <span className="supporting-item">
+                      <strong>+{(selectedCorridor?.score || 0.0724).toFixed(4)}</strong> criticality
+                    </span>
                   </div>
 
                   <div className="divider-line" />
@@ -2409,11 +2473,15 @@ export default function CycloneTwinApp() {
                       Why this corridor
                     </span>
                     <p>
-                      Restoring the Saidapet–Adyar arterial reconnects <strong>89,000 residents</strong> across affected wards to trauma-care facilities and reduces transit detour by <strong>22 minutes</strong>.
+                      Restoring the {selectedCorridor?.name || "Saidapet–Adyar arterial"} reconnects{" "}
+                      <strong>{(selectedCorridor?.population_recovered || 89000).toLocaleString()} residents</strong>{" "}
+                      across affected wards to trauma-care facilities and reduces transit detour by{" "}
+                      <strong>{selectedCorridor?.detour_saved_min || 22} minutes</strong>.
                     </p>
                   </div>
 
                   <div className="divider-line" />
+
 
                   <div className="progression-container">
                     <span className="decision-section-label">Population access progression</span>
