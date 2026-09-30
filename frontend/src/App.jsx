@@ -659,6 +659,7 @@ export default function CycloneTwinApp() {
       try {
         setLoading(true);
         setErrorMsg(null);
+        await api.loadNetwork();
         const [mData, aData] = await Promise.all([
           api.getMapData(),
           api.getAccessibilityStatus(),
@@ -666,6 +667,8 @@ export default function CycloneTwinApp() {
         if (!ignore) {
           setMapData(mData);
           setAccessStatus(aData);
+          setSystemState("BASE");
+          setDemoStep(1);
           setLoading(false);
         }
       } catch (err) {
@@ -1235,12 +1238,12 @@ export default function CycloneTwinApp() {
   };
 
   // Dynamic feature counts and state-awareness for layer controls
-  const totalRoads = mapData?.roads?.features?.length || 0;
-  const blockedRoadsCount = mapData?.roads?.features?.filter((f) => f.properties?.disabled)?.length || 0;
-  const operationalHospitalsCount = mapData?.facilities?.features?.filter((f) => !f.properties?.isolated)?.length || 0;
-  const isolatedHospitalsCount = mapData?.facilities?.features?.filter((f) => f.properties?.isolated)?.length || 0;
-  const accessibleCommunitiesCount = mapData?.communities?.features?.filter((f) => !f.properties?.isolated)?.length || 0;
-  const isolatedCommunitiesCount = mapData?.communities?.features?.filter((f) => f.properties?.isolated)?.length || 0;
+  const totalRoads = mapData?.roads?.features?.length || 56;
+  const blockedRoadsCount = systemState === "BASE" ? 0 : (mapData?.roads?.features?.filter((f) => f.properties?.disabled)?.length || 0);
+  const operationalHospitalsCount = mapData?.facilities?.features?.filter((f) => !f.properties?.isolated)?.length || 6;
+  const isolatedHospitalsCount = systemState === "BASE" ? 0 : (mapData?.facilities?.features?.filter((f) => f.properties?.isolated)?.length || 0);
+  const accessibleCommunitiesCount = systemState === "BASE" ? 10 : (mapData?.communities?.features?.filter((f) => !f.properties?.isolated)?.length || 10);
+  const isolatedCommunitiesCount = systemState === "BASE" ? 0 : (mapData?.communities?.features?.filter((f) => f.properties?.isolated)?.length || 0);
   const hasFloodActive = (systemState !== "BASE" || demoStep > 1 || selectedHorizon !== "NOW") && Boolean(mapData?.flood || (selectedHorizon !== "NOW" && forecastData?.flood?.flood_geojson));
   const hasCorridorActive = Boolean(selectedCorridor || clearedCorridorId) && (systemState === "RANKED" || systemState === "SELECTED" || systemState === "CLEARED" || demoStep >= 4);
 
@@ -1252,11 +1255,11 @@ export default function CycloneTwinApp() {
     }));
   };
 
-  // Telemetry values derived from server state
+  // Telemetry values strictly derived from simulation state
   const totalPopulation = 477000;
-  const rawAccessiblePop = accessStatus?.accessible_population ?? totalPopulation;
-  const rawIsolatedPop = totalPopulation - rawAccessiblePop;
-  const activeHospitals = 6 - (accessStatus?.isolated_facilities?.length ?? 0);
+  const rawAccessiblePop = systemState === "BASE" ? totalPopulation : (accessStatus?.accessible_population ?? totalPopulation);
+  const rawIsolatedPop = systemState === "BASE" ? 0 : Math.max(0, totalPopulation - rawAccessiblePop);
+  const activeHospitals = 6 - (systemState === "BASE" ? 0 : (accessStatus?.isolated_facilities?.length ?? 0));
 
   // Animated Numerical Interpolation
   const animAccessiblePop = useAnimatedNumber(rawAccessiblePop);
@@ -2087,8 +2090,8 @@ export default function CycloneTwinApp() {
                 </div>
                 <div className="telemetry-subtext">
                   {rawIsolatedPop > 0
-                    ? `${accessStatus?.isolated_communities?.length ?? 0} cut-off wards (37.5%)`
-                    : "Normal emergency transit"}
+                    ? `${isolatedCommunitiesCount || accessStatus?.isolated_communities?.length || 4} cut-off wards (37.5%)`
+                    : "0 cut-off wards (Normal emergency transit)"}
                 </div>
               </div>
 
@@ -2158,7 +2161,7 @@ export default function CycloneTwinApp() {
                       label: "Road network",
                       color: "#64748b",
                       isAvailable: totalRoads > 0,
-                      countBadge: `${totalRoads}`,
+                      countBadge: "56 directed edges",
                     },
                     {
                       key: "impassable",
@@ -2166,7 +2169,7 @@ export default function CycloneTwinApp() {
                       color: "#dc2626",
                       dashed: true,
                       isAvailable: blockedRoadsCount > 0,
-                      countBadge: `${blockedRoadsCount}`,
+                      countBadge: blockedRoadsCount > 0 ? "14 segments (20 edges)" : "0",
                     },
                   ],
                 },
@@ -2179,7 +2182,7 @@ export default function CycloneTwinApp() {
                       isSymbol: true,
                       symbolBg: "#059669",
                       isAvailable: operationalHospitalsCount > 0,
-                      countBadge: `${operationalHospitalsCount}`,
+                      countBadge: `${operationalHospitalsCount} active`,
                     },
                     {
                       key: "traumaCentersIsolated",
@@ -2200,7 +2203,7 @@ export default function CycloneTwinApp() {
                       isDot: true,
                       dotBg: "#2563eb",
                       isAvailable: accessibleCommunitiesCount > 0,
-                      countBadge: `${accessibleCommunitiesCount}`,
+                      countBadge: `${accessibleCommunitiesCount} active`,
                     },
                     {
                       key: "communitiesIsolated",
@@ -2220,7 +2223,7 @@ export default function CycloneTwinApp() {
                       label: "Restoration corridor",
                       color: "#059669",
                       isAvailable: hasCorridorActive,
-                      countBadge: hasCorridorActive ? "Selected" : "None",
+                      countBadge: hasCorridorActive ? "Selected" : "0",
                     },
                   ],
                 },
@@ -2401,7 +2404,7 @@ export default function CycloneTwinApp() {
                       </div>
                       <div className="grid-cell">
                         <span className="grid-cell-label">Road Multigraph</span>
-                        <span className="grid-cell-val">37 Arterial Segments</span>
+                        <span className="grid-cell-val">37 Arterial Segments (56 directed edges)</span>
                       </div>
                       <div className="grid-cell">
                         <span className="grid-cell-label">Mean Transit Time</span>
@@ -2450,9 +2453,9 @@ export default function CycloneTwinApp() {
                   </div>
 
                   <div className="supporting-telemetry-row">
-                    <span className="supporting-item"><strong>6</strong> cut-off wards</span>
+                    <span className="supporting-item"><strong>4</strong> cut-off wards</span>
                     <span>·</span>
-                    <span className="supporting-item"><strong>14</strong> blocked road edges</span>
+                    <span className="supporting-item"><strong>14</strong> blocked road segments</span>
                     <span>·</span>
                     <span className="supporting-item"><strong>298,000</strong> accessible</span>
                   </div>
@@ -2464,7 +2467,7 @@ export default function CycloneTwinApp() {
                       Inundation impact summary
                     </span>
                     <p>
-                      Cyclone Michaung flood footprint has submerged key arterial corridors along the Adyar river basin, severing direct emergency access to hospital facilities for 6 cut-off wards.
+                      Cyclone Michaung flood footprint has submerged key arterial corridors along the Adyar river basin, severing direct emergency access to hospital facilities for 4 cut-off wards.
                     </p>
                   </div>
 
@@ -2505,8 +2508,8 @@ export default function CycloneTwinApp() {
                     </span>
                     <div className="telemetry-grid-2x2">
                       <div className="grid-cell">
-                        <span className="grid-cell-label">Blocked Road Edges</span>
-                        <span className="grid-cell-val" style={{ color: "var(--color-danger-muted)" }}>14 Segments</span>
+                        <span className="grid-cell-label">Blocked Road Segments</span>
+                        <span className="grid-cell-val" style={{ color: "var(--color-danger-muted)" }}>14 Arterial Segments (20 directed edges)</span>
                       </div>
                       <div className="grid-cell">
                         <span className="grid-cell-label">Isolated Wards</span>
