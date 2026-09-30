@@ -1768,173 +1768,228 @@ export default function CycloneTwinApp() {
           gap: "16px",
         }}
       >
-          {/* Connectivity Status Banner */}
-          <div
-            style={{
-              background: (demoSimulatedOffline || netStatus === NETWORK_STATUS.OFFLINE)
-                ? "rgba(245, 158, 11, 0.12)"
-                : netStatus === NETWORK_STATUS.ONLINE
-                ? "rgba(16, 185, 129, 0.1)"
-                : "rgba(239, 68, 68, 0.1)",
-              border: `1px solid ${(demoSimulatedOffline || netStatus === NETWORK_STATUS.OFFLINE) ? "#f59e0b" : netStatus === NETWORK_STATUS.ONLINE ? "#10b981" : "#ef4444"}`,
-              padding: "12px 16px",
-              borderRadius: "6px",
-            }}
+        {/* Field Mode Context Subheader */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: "var(--bg-panel)", border: "1px solid var(--border-subtle)", borderRadius: "6px" }}>
+          <div>
+            <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px" }}>
+              <span>📡 FIELD EVIDENCE & GROUND OBSERVATION CAPTURE</span>
+            </div>
+            <div style={{ fontSize: "11.5px", color: "var(--text-secondary)", marginTop: "2px" }}>
+              Ground truth telemetry and rapid damage assessment for frontline disaster responders
+            </div>
+          </div>
+          <button
+            onClick={() => setViewMode("COMMAND_CENTER")}
+            style={{ background: "rgba(37, 99, 235, 0.15)", color: "#60a5fa", border: "1px solid rgba(37, 99, 235, 0.35)", padding: "6px 14px", borderRadius: "4px", fontSize: "11.5px", fontWeight: 600, cursor: "pointer" }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span
+            ← Return to Command Center
+          </button>
+        </div>
+
+        {/* Connectivity Status Banner */}
+        {(() => {
+          const isOffline = demoSimulatedOffline || netStatus === NETWORK_STATUS.OFFLINE;
+          const isUnstable = !isOffline && netStatus === NETWORK_STATUS.UNSTABLE;
+          const queuedCount = offlineItems.filter((i) => i.sync_status === "QUEUED" || i.sync_status === "FAILED").length;
+          const syncingCount = offlineItems.filter((i) => i.sync_status === "SYNCING").length;
+
+          return (
+            <div
+              style={{
+                background: isOffline
+                  ? "rgba(239, 68, 68, 0.08)"
+                  : isUnstable
+                  ? "rgba(245, 158, 11, 0.08)"
+                  : "rgba(16, 185, 129, 0.08)",
+                border: `1px solid ${
+                  isOffline ? "rgba(239, 68, 68, 0.3)" : isUnstable ? "rgba(245, 158, 11, 0.3)" : "rgba(16, 185, 129, 0.25)"
+                }`,
+                padding: "12px 16px",
+                borderRadius: "6px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span
+                    style={{
+                      width: "10px",
+                      height: "10px",
+                      borderRadius: "50%",
+                      background: isOffline ? "#ef4444" : isUnstable ? "#f59e0b" : "#10b981",
+                      boxShadow: `0 0 6px ${isOffline ? "#ef4444" : isUnstable ? "#f59e0b" : "#10b981"}`,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div>
+                    <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#f8fafc", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span>
+                        {isOffline
+                          ? "OFFLINE MODE — LOCAL STORAGE ACTIVE"
+                          : isUnstable
+                          ? "CONNECTION UNSTABLE"
+                          : "CONNECTED TO BACKEND PIPELINE"}
+                      </span>
+                      <span style={{ fontSize: "10px", padding: "1px 6px", borderRadius: "3px", background: "rgba(255,255,255,0.08)", color: "var(--text-muted)", fontWeight: 500 }}>
+                        OFFLINE-CAPABLE
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "11.5px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                      {isOffline
+                        ? "Reports are saved safely on-device in IndexedDB and will synchronize automatically when connectivity returns."
+                        : isUnstable
+                        ? "Network latency or instability detected. Reports will be queued locally if synchronization fails."
+                        : "Active real-time connection. Field reports will synchronize automatically with the Command Center."}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleManualSyncNow}
+                  disabled={loading || isOffline || queuedCount === 0}
                   style={{
-                    width: "12px",
-                    height: "12px",
-                    borderRadius: "50%",
-                    background: (demoSimulatedOffline || netStatus === NETWORK_STATUS.OFFLINE)
-                      ? "#f59e0b"
-                      : netStatus === NETWORK_STATUS.ONLINE
-                      ? "#10b981"
-                      : "#ef4444",
-                    boxShadow: "0 0 6px currentColor",
+                    background: isOffline || queuedCount === 0 ? "rgba(255,255,255,0.06)" : "#2563eb",
+                    color: isOffline || queuedCount === 0 ? "var(--text-muted)" : "#fff",
+                    border: isOffline || queuedCount === 0 ? "1px solid var(--border-subtle)" : "none",
+                    padding: "6px 14px",
+                    borderRadius: "4px",
+                    fontSize: "11.5px",
+                    fontWeight: 700,
+                    cursor: isOffline || queuedCount === 0 ? "not-allowed" : "pointer",
+                    whiteSpace: "nowrap",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    transition: "var(--transition)",
                   }}
+                >
+                  {loading || syncingCount > 0
+                    ? "🔄 SYNCING..."
+                    : isOffline
+                    ? `QUEUED FOR SYNC (${queuedCount})`
+                    : queuedCount === 0
+                    ? "SYNC QUEUE (0 PENDING)"
+                    : `🔄 SYNC QUEUE (${queuedCount} PENDING)`}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+          {/* 1. Primary Field Observation Card */}
+          <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border-subtle)", borderRadius: "8px", padding: "18px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <h3 style={{ fontSize: "14.5px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+                Field Observation Entry
+              </h3>
+              <span style={{ fontSize: "10.5px", color: "var(--text-muted)", background: "rgba(255, 255, 255, 0.06)", border: "1px solid var(--border-subtle)", padding: "2px 7px", borderRadius: "3px" }}>
+                OFFLINE-CAPABLE (IndexedDB)
+              </span>
+            </div>
+
+            {fieldNotice && (
+              <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", color: "#34d399", padding: "8px 12px", borderRadius: "4px", fontSize: "11.5px", marginBottom: "12px" }}>
+                {fieldNotice}
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div>
+                <label style={{ fontSize: "11.5px", color: "var(--text-muted)", display: "block", marginBottom: "3px" }}>Observation Type</label>
+                <select
+                  value={evidenceType}
+                  onChange={(e) => setEvidenceType(e.target.value)}
+                  style={{ width: "100%", background: "#0f172a", color: "#fff", border: "1px solid var(--border-subtle)", padding: "7px 10px", borderRadius: "4px", fontSize: "12px" }}
+                >
+                  <option value="ROAD_BLOCKED">ROAD BLOCKED</option>
+                  <option value="ROAD_OPEN">ROAD PASSABLE / OPEN</option>
+                  <option value="FLOOD_DEPTH">WATER DEPTH MEASUREMENT</option>
+                  <option value="FLOOD_PRESENT">SURFACE FLOODING PRESENT</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: "11.5px", color: "var(--text-muted)", display: "block", marginBottom: "3px" }}>Water Depth (meters)</label>
+                <input
+                  type="text"
+                  value={evidenceDepth}
+                  onChange={(e) => setEvidenceDepth(e.target.value)}
+                  placeholder="e.g. 0.40"
+                  style={{ width: "100%", background: "#0f172a", color: "#fff", border: "1px solid var(--border-subtle)", padding: "7px 10px", borderRadius: "4px", fontSize: "12px" }}
                 />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div>
-                  <div style={{ fontSize: "14px", fontWeight: 700, color: "#f8fafc" }}>
-                    {(demoSimulatedOffline || netStatus === NETWORK_STATUS.OFFLINE)
-                      ? "🔴 CONNECTION LOST — REPORTS SAVED LOCALLY"
-                      : netStatus === NETWORK_STATUS.ONLINE
-                      ? "🟢 CONNECTED TO BACKEND PIPELINE"
-                      : "🟠 CONNECTION UNSTABLE"}
-                  </div>
-                  <div style={{ fontSize: "11.5px", color: "var(--text-secondary)", marginTop: "2px" }}>
-                    {(demoSimulatedOffline || netStatus === NETWORK_STATUS.OFFLINE)
-                      ? "Your report is safe on this device. Stored locally for automatic synchronization when connectivity returns."
-                      : "Active connection. Field reports will synchronize immediately with backend network state."}
-                  </div>
+                  <label style={{ fontSize: "11.5px", color: "var(--text-muted)", display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
+                    <span>Latitude (°N)</span>
+                    <span style={{ fontSize: "10px", color: gpsStatus === "CAPTURED" ? "#34d399" : "var(--text-muted)" }}>
+                      {gpsStatus === "CAPTURED" ? "✓ Device GPS" : "Manual / Reference"}
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    value={evidenceLat}
+                    onChange={(e) => setEvidenceLat(e.target.value)}
+                    placeholder="13.0500"
+                    style={{ width: "100%", background: "#0f172a", color: "#fff", border: "1px solid var(--border-subtle)", padding: "7px 10px", borderRadius: "4px", fontSize: "12px" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "11.5px", color: "var(--text-muted)", display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
+                    <span>Longitude (°E)</span>
+                    <span style={{ fontSize: "10px", color: gpsStatus === "CAPTURED" ? "#34d399" : "var(--text-muted)" }}>
+                      {gpsStatus === "CAPTURED" ? "✓ Device GPS" : "Manual / Reference"}
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    value={evidenceLon}
+                    onChange={(e) => setEvidenceLon(e.target.value)}
+                    placeholder="80.2200"
+                    style={{ width: "100%", background: "#0f172a", color: "#fff", border: "1px solid var(--border-subtle)", padding: "7px 10px", borderRadius: "4px", fontSize: "12px" }}
+                  />
                 </div>
               </div>
 
               <button
-                onClick={handleManualSyncNow}
-                disabled={loading}
-                style={{
-                  background: "#2563eb",
-                  color: "#fff",
-                  border: "none",
-                  padding: "6px 14px",
-                  borderRadius: "4px",
-                  fontSize: "11.5px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
+                onClick={handleCaptureGpsLocation}
+                style={{ background: gpsStatus === "CAPTURED" ? "rgba(16, 185, 129, 0.2)" : "#3b82f6", color: gpsStatus === "CAPTURED" ? "#34d399" : "#fff", border: gpsStatus === "CAPTURED" ? "1px solid #10b981" : "none", padding: "6px 12px", borderRadius: "4px", fontSize: "11.5px", fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" }}
               >
-                {loading ? "Syncing Report..." : "🔄 SYNC QUEUE NOW"}
+                {gpsStatus === "LOCATING" ? "📡 Acquiring GPS Fix..." : gpsStatus === "CAPTURED" ? "✓ Verified Device GPS Fixed" : "📍 Capture Live GPS Position"}
               </button>
-            </div>
-          </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            {/* 1. Primary Field Observation Card */}
-            <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border-subtle)", borderRadius: "8px", padding: "18px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                <h3 style={{ fontSize: "14.5px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
-                  Field Observation Entry
-                </h3>
-                <span style={{ fontSize: "11px", color: "#38bdf8", background: "rgba(56, 189, 248, 0.15)", padding: "2px 6px", borderRadius: "3px" }}>
-                  Offline Resilient
-                </span>
+              <div>
+                <label style={{ fontSize: "11.5px", color: "var(--text-muted)", display: "block", marginBottom: "3px" }}>Source / Responder Team</label>
+                <select
+                  value={evidenceSource}
+                  onChange={(e) => setEvidenceSource(e.target.value)}
+                  style={{ width: "100%", background: "#0f172a", color: "#fff", border: "1px solid var(--border-subtle)", padding: "7px 10px", borderRadius: "4px", fontSize: "12px" }}
+                >
+                  <option value="field_team">Field Response Team</option>
+                  <option value="official">Official Emergency Agency</option>
+                  <option value="sensor">IoT Water Level Sensor</option>
+                  <option value="citizen">Citizen Ground Report</option>
+                </select>
               </div>
 
-              {fieldNotice && (
-                <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid #10b981", color: "#34d399", padding: "8px 12px", borderRadius: "4px", fontSize: "11.5px", marginBottom: "12px" }}>
-                  {fieldNotice}
-                </div>
-              )}
+              <div>
+                <label style={{ fontSize: "11.5px", color: "var(--text-muted)", display: "block", marginBottom: "3px" }}>Field Notes / Location Description</label>
+                <textarea
+                  rows={2}
+                  value={evidenceDesc}
+                  onChange={(e) => setEvidenceDesc(e.target.value)}
+                  placeholder="e.g. Water inundation reported near Saidapet arterial junction."
+                  style={{ width: "100%", background: "#0f172a", color: "#fff", border: "1px solid var(--border-subtle)", padding: "7px 10px", borderRadius: "4px", fontSize: "12px", fontFamily: "inherit" }}
+                />
+              </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div>
-                  <label style={{ fontSize: "11.5px", color: "var(--text-muted)", display: "block", marginBottom: "3px" }}>Observation Type</label>
-                  <select
-                    value={evidenceType}
-                    onChange={(e) => setEvidenceType(e.target.value)}
-                    style={{ width: "100%", background: "#0f172a", color: "#fff", border: "1px solid var(--border-subtle)", padding: "7px 10px", borderRadius: "4px", fontSize: "12px" }}
-                  >
-                    <option value="ROAD_BLOCKED">ROAD BLOCKED</option>
-                    <option value="ROAD_OPEN">ROAD PASSABLE / OPEN</option>
-                    <option value="FLOOD_DEPTH">WATER DEPTH MEASUREMENT</option>
-                    <option value="FLOOD_PRESENT">SURFACE FLOODING PRESENT</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "11.5px", color: "var(--text-muted)", display: "block", marginBottom: "3px" }}>Water Depth (meters)</label>
-                  <input
-                    type="text"
-                    value={evidenceDepth}
-                    onChange={(e) => setEvidenceDepth(e.target.value)}
-                    placeholder="e.g. 0.40"
-                    style={{ width: "100%", background: "#0f172a", color: "#fff", border: "1px solid var(--border-subtle)", padding: "7px 10px", borderRadius: "4px", fontSize: "12px" }}
-                  />
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  <div>
-                    <label style={{ fontSize: "11.5px", color: "var(--text-muted)", display: "block", marginBottom: "3px" }}>Latitude (°N)</label>
-                    <input
-                      type="text"
-                      value={evidenceLat}
-                      onChange={(e) => setEvidenceLat(e.target.value)}
-                      placeholder="13.0500"
-                      style={{ width: "100%", background: "#0f172a", color: "#fff", border: "1px solid var(--border-subtle)", padding: "7px 10px", borderRadius: "4px", fontSize: "12px" }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: "11.5px", color: "var(--text-muted)", display: "block", marginBottom: "3px" }}>Longitude (°E)</label>
-                    <input
-                      type="text"
-                      value={evidenceLon}
-                      onChange={(e) => setEvidenceLon(e.target.value)}
-                      placeholder="80.2200"
-                      style={{ width: "100%", background: "#0f172a", color: "#fff", border: "1px solid var(--border-subtle)", padding: "7px 10px", borderRadius: "4px", fontSize: "12px" }}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleCaptureGpsLocation}
-                  style={{ background: "#3b82f6", color: "#fff", border: "none", padding: "6px 10px", borderRadius: "4px", fontSize: "11.5px", fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" }}
-                >
-                  {gpsStatus === "LOCATING" ? "Acquiring GPS..." : gpsStatus === "CAPTURED" ? "✓ GPS Position Captured" : "📍 Capture GPS Location"}
-                </button>
-
-                <div>
-                  <label style={{ fontSize: "11.5px", color: "var(--text-muted)", display: "block", marginBottom: "3px" }}>Source / Responder Team</label>
-                  <select
-                    value={evidenceSource}
-                    onChange={(e) => setEvidenceSource(e.target.value)}
-                    style={{ width: "100%", background: "#0f172a", color: "#fff", border: "1px solid var(--border-subtle)", padding: "7px 10px", borderRadius: "4px", fontSize: "12px" }}
-                  >
-                    <option value="field_team">Field Response Team</option>
-                    <option value="official">Official Emergency Agency</option>
-                    <option value="sensor">IoT Water Level Sensor</option>
-                    <option value="citizen">Citizen Ground Report</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "11.5px", color: "var(--text-muted)", display: "block", marginBottom: "3px" }}>Field Notes / Location Description</label>
-                  <textarea
-                    rows={2}
-                    value={evidenceDesc}
-                    onChange={(e) => setEvidenceDesc(e.target.value)}
-                    placeholder="e.g. Responder reports a blocked road near Saidapet."
-                    style={{ width: "100%", background: "#0f172a", color: "#fff", border: "1px solid var(--border-subtle)", padding: "7px 10px", borderRadius: "4px", fontSize: "12px", fontFamily: "inherit" }}
-                  />
-                </div>
-
+              <div>
                 <button
                   onClick={handleSaveOfflineLocally}
                   disabled={loading}
                   style={{
+                    width: "100%",
                     background: "#059669",
                     color: "#fff",
                     border: "none",
@@ -1949,126 +2004,136 @@ export default function CycloneTwinApp() {
                 >
                   💾 SAVE FIELD REPORT
                 </button>
-              </div>
-            </div>
-
-            {/* 2. Simplified Queue Summary Card & Expandable Advanced Details */}
-            <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border-subtle)", borderRadius: "8px", padding: "18px", display: "flex", flexDirection: "column" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                <h3 style={{ fontSize: "14.5px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
-                  Report Synchronization Status
-                </h3>
-                <span style={{ fontSize: "12px", fontWeight: 700, color: "#38bdf8" }}>
-                  {offlineItems.length} Total Saved
-                </span>
-              </div>
-
-              {/* Status Pill Summary */}
-              <div style={{ display: "flex", gap: "8px", marginBottom: "14px", flexWrap: "wrap" }}>
-                <span style={{ padding: "4px 8px", borderRadius: "4px", background: "rgba(245, 158, 11, 0.2)", color: "#f59e0b", fontSize: "11px", fontWeight: 700 }}>
-                  SAVED LOCALLY: {offlineItems.filter((i) => i.sync_status === "QUEUED").length}
-                </span>
-                <span style={{ padding: "4px 8px", borderRadius: "4px", background: "rgba(16, 185, 129, 0.2)", color: "#34d399", fontSize: "11px", fontWeight: 700 }}>
-                  FIELD REPORT SYNCED: {offlineItems.filter((i) => i.sync_status === "SYNCED").length}
-                </span>
-                {offlineItems.filter((i) => i.sync_status === "FAILED").length > 0 && (
-                  <span style={{ padding: "4px 8px", borderRadius: "4px", background: "rgba(239, 68, 68, 0.2)", color: "#ef4444", fontSize: "11px", fontWeight: 700 }}>
-                    NEEDS RETRY: {offlineItems.filter((i) => i.sync_status === "FAILED").length}
-                  </span>
-                )}
-                {offlineItems.filter((i) => i.sync_status === "CONFLICT").length > 0 && (
-                  <span style={{ padding: "4px 8px", borderRadius: "4px", background: "rgba(168, 85, 247, 0.2)", color: "#c084fc", fontSize: "11px", fontWeight: 700 }}>
-                    CONFLICT REQUIRES REVIEW: {offlineItems.filter((i) => i.sync_status === "CONFLICT").length}
-                  </span>
-                )}
-              </div>
-
-              {/* High-level human readable report items list */}
-              <div style={{ flex: 1, overflowY: "auto", maxHeight: "280px", display: "flex", flexDirection: "column", gap: "8px", marginBottom: "12px" }}>
-                {offlineItems.length === 0 ? (
-                  <div style={{ fontSize: "12px", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", paddingTop: "32px" }}>
-                    No field reports stored on device.
-                  </div>
-                ) : (
-                  offlineItems.map((item) => (
-                    <div
-                      key={item.client_observation_id}
-                      style={{
-                        background: "#0f172a",
-                        padding: "10px 12px",
-                        borderRadius: "6px",
-                        borderLeft: `4px solid ${item.sync_status === "SYNCED" ? "#10b981" : item.sync_status === "FAILED" ? "#ef4444" : item.sync_status === "CONFLICT" ? "#a855f7" : "#f59e0b"}`,
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc" }}>
-                          {item.observation_type.replace(/_/g, " ")}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: "10px",
-                            padding: "2px 6px",
-                            borderRadius: "3px",
-                            fontWeight: 700,
-                            background: item.sync_status === "SYNCED" ? "#059669" : item.sync_status === "FAILED" ? "#dc2626" : item.sync_status === "CONFLICT" ? "#7e22ce" : "#d97706",
-                            color: "#fff",
-                          }}
-                        >
-                          {item.sync_status === "QUEUED" ? "SAVED LOCALLY" : item.sync_status === "SYNCED" ? "SYNCED" : item.sync_status}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: "11.5px", marginTop: "4px", color: "var(--text-secondary)" }}>
-                        {item.description || "Field observation report"}
-                      </div>
-                      <div style={{ fontSize: "10.5px", marginTop: "2px", color: "#94a3b8" }}>
-                        Depth: {item.water_depth_m ? `${item.water_depth_m}m` : "N/A"} | Source: {item.source}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Advanced Technical Accordion Toggle */}
-              <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "10px" }}>
-                <button
-                  onClick={() => setShowAdvancedSyncDetails((prev) => !prev)}
-                  style={{
-                    background: "transparent",
-                    color: "#94a3b8",
-                    border: "none",
-                    padding: "4px 0",
-                    fontSize: "11px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  {showAdvancedSyncDetails ? "▼ Hide Technical Sync Details" : "▶ View Advanced Sync Details (IndexedDB)"}
-                </button>
-
-                {showAdvancedSyncDetails && (
-                  <div style={{ marginTop: "10px", background: "rgba(0,0,0,0.3)", padding: "10px", borderRadius: "4px", fontSize: "10.5px", fontFamily: "monospace", color: "#cbd5e1", maxHeight: "160px", overflowY: "auto" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <span>IndexedDB Store: <code>field_observations</code></span>
-                      <button onClick={handleClearSyncedLocal} style={{ background: "transparent", color: "#f43f5e", border: "none", cursor: "pointer", fontSize: "10px" }}>
-                        Clear Synced
-                      </button>
-                    </div>
-                    {offlineItems.map((i) => (
-                      <div key={i.client_observation_id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "3px 0" }}>
-                        <div>UUID: {i.client_observation_id}</div>
-                        <div>Status: {i.sync_status} | Captured: {i.captured_at?.slice(11, 19)}</div>
-                        {i.conflict_reason && <div style={{ color: "#c084fc" }}>Conflict: {i.conflict_reason}</div>}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "6px", textAlign: "center" }}>
+                  Saves immediately to local IndexedDB. Automatically synchronizes with Command Center when connected.
+                </div>
               </div>
             </div>
           </div>
-        </main>
+
+          {/* 2. Simplified Queue Summary Card & Expandable Advanced Details */}
+          <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border-subtle)", borderRadius: "8px", padding: "18px", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <h3 style={{ fontSize: "14.5px", fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
+                Report Synchronization Status
+              </h3>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: "#38bdf8" }}>
+                {offlineItems.length} Total Stored
+              </span>
+            </div>
+
+            {/* Status Pill Summary */}
+            <div style={{ display: "flex", gap: "8px", marginBottom: "14px", flexWrap: "wrap" }}>
+              <span style={{ padding: "4px 8px", borderRadius: "4px", background: "rgba(245, 158, 11, 0.2)", color: "#f59e0b", fontSize: "11px", fontWeight: 700 }}>
+                SAVED LOCALLY: {offlineItems.filter((i) => i.sync_status === "QUEUED").length}
+              </span>
+              <span style={{ padding: "4px 8px", borderRadius: "4px", background: "rgba(16, 185, 129, 0.2)", color: "#34d399", fontSize: "11px", fontWeight: 700 }}>
+                FIELD REPORT SYNCED: {offlineItems.filter((i) => i.sync_status === "SYNCED").length}
+              </span>
+              {offlineItems.filter((i) => i.sync_status === "FAILED").length > 0 && (
+                <span style={{ padding: "4px 8px", borderRadius: "4px", background: "rgba(239, 68, 68, 0.2)", color: "#ef4444", fontSize: "11px", fontWeight: 700 }}>
+                  NEEDS RETRY: {offlineItems.filter((i) => i.sync_status === "FAILED").length}
+                </span>
+              )}
+              {offlineItems.filter((i) => i.sync_status === "CONFLICT").length > 0 && (
+                <span style={{ padding: "4px 8px", borderRadius: "4px", background: "rgba(168, 85, 247, 0.2)", color: "#c084fc", fontSize: "11px", fontWeight: 700 }}>
+                  CONFLICT REQUIRES REVIEW: {offlineItems.filter((i) => i.sync_status === "CONFLICT").length}
+                </span>
+              )}
+            </div>
+
+            {/* High-level human readable report items list / Empty State */}
+            <div style={{ flex: 1, overflowY: "auto", maxHeight: "280px", display: "flex", flexDirection: "column", gap: "8px", marginBottom: "12px" }}>
+              {offlineItems.length === 0 ? (
+                <div style={{ padding: "32px 16px", textAlign: "center", background: "rgba(15, 23, 42, 0.4)", borderRadius: "6px", border: "1px dashed var(--border-subtle)", margin: "auto 0" }}>
+                  <div style={{ fontSize: "24px", marginBottom: "8px" }}>📋</div>
+                  <div style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.03em" }}>
+                    NO PENDING FIELD REPORTS
+                  </div>
+                  <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: "4px auto 0", maxWidth: "280px", lineHeight: 1.4 }}>
+                    Reports saved while offline will appear here and synchronize automatically when connectivity is available.
+                  </p>
+                </div>
+              ) : (
+                offlineItems.map((item) => (
+                  <div
+                    key={item.client_observation_id}
+                    style={{
+                      background: "#0f172a",
+                      padding: "10px 12px",
+                      borderRadius: "6px",
+                      borderLeft: `4px solid ${item.sync_status === "SYNCED" ? "#10b981" : item.sync_status === "FAILED" ? "#ef4444" : item.sync_status === "CONFLICT" ? "#a855f7" : "#f59e0b"}`,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: "12px", fontWeight: 700, color: "#f8fafc" }}>
+                        {item.observation_type.replace(/_/g, " ")}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          padding: "2px 6px",
+                          borderRadius: "3px",
+                          fontWeight: 700,
+                          background: item.sync_status === "SYNCED" ? "#059669" : item.sync_status === "FAILED" ? "#dc2626" : item.sync_status === "CONFLICT" ? "#7e22ce" : "#d97706",
+                          color: "#fff",
+                        }}
+                      >
+                        {item.sync_status === "QUEUED" ? "SAVED LOCALLY" : item.sync_status === "SYNCED" ? "SYNCED" : item.sync_status}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "11.5px", marginTop: "4px", color: "var(--text-secondary)" }}>
+                      {item.description || "Field observation report"}
+                    </div>
+                    <div style={{ fontSize: "10.5px", marginTop: "2px", color: "#94a3b8" }}>
+                      Depth: {item.water_depth_m ? `${item.water_depth_m}m` : "N/A"} | Source: {item.source}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Advanced Technical Accordion Toggle */}
+            <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "10px" }}>
+              <button
+                onClick={() => setShowAdvancedSyncDetails((prev) => !prev)}
+                style={{
+                  background: "transparent",
+                  color: "#94a3b8",
+                  border: "none",
+                  padding: "4px 0",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                {showAdvancedSyncDetails ? "▼ Hide Technical Sync Details" : "▶ View Advanced Sync Details (IndexedDB)"}
+              </button>
+
+              {showAdvancedSyncDetails && (
+                <div style={{ marginTop: "10px", background: "rgba(0,0,0,0.3)", padding: "10px", borderRadius: "4px", fontSize: "10.5px", fontFamily: "monospace", color: "#cbd5e1", maxHeight: "160px", overflowY: "auto" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                    <span>IndexedDB Store: <code>field_observations</code></span>
+                    <button onClick={handleClearSyncedLocal} style={{ background: "transparent", color: "#f43f5e", border: "none", cursor: "pointer", fontSize: "10px" }}>
+                      Clear Synced
+                    </button>
+                  </div>
+                  {offlineItems.map((i) => (
+                    <div key={i.client_observation_id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "3px 0" }}>
+                      <div>UUID: {i.client_observation_id}</div>
+                      <div>Status: {i.sync_status} | Captured: {i.captured_at?.slice(11, 19)}</div>
+                      {i.conflict_reason && <div style={{ color: "#c084fc" }}>Conflict: {i.conflict_reason}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
 
         <main
           className="gis-workspace"
