@@ -1,33 +1,33 @@
 /* ==========================================================================
    CYCLONE TWIN — MUNICIPAL EMERGENCY OPERATIONS CONSOLE
-   Critical Access Restoration Engine (Restrained GIS & Decision Support)
+   Critical Access Restoration Engine (Restrained Cartographic Decision UI)
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
   /* Restrained Professional UI Font Stack */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', Consolas, monospace;
 
-  /* Restrained Professional Palette (Slate / Deep Graphite Navy) */
-  --bg-app: #0b1120;
-  --bg-header: #0f172a;
-  --bg-panel: #131e33;
-  --bg-subtle: #182642;
-  --bg-card: #1c2b4a;
+  /* Restrained Professional Palette (Calm Dark Slate / Navy) */
+  --bg-app: #090d16;
+  --bg-header: #0d1424;
+  --bg-panel: #111a2e;
+  --bg-subtle: #16223d;
+  --bg-card: #1a2948;
   --bg-hover: rgba(255, 255, 255, 0.05);
-  --bg-code: #090e1a;
+  --bg-code: #070a12;
 
   --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-medium: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.20);
+  --border-medium: rgba(255, 255, 255, 0.14);
+  --border-strong: rgba(255, 255, 255, 0.22);
 
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
 
-  /* State Colors (Used strictly for operational state) */
+  /* State Colors (Calibrated semantic tokens) */
   --color-danger: #ef4444;
   --color-danger-muted: #f87171;
   --color-success: #10b981;
@@ -36,6 +36,7 @@
   --color-active-muted: #38bdf8;
   --color-warning: #f59e0b;
   --color-warning-muted: #fbbf24;
+  --color-accent: #06b6d4;
 
   /* Transitions */
   --transition: 0.15s ease;
@@ -57,7 +58,7 @@ html, body, #root {
   background-color: var(--bg-app);
   color: var(--text-primary);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.5;
   overflow: hidden;
 }
@@ -80,7 +81,7 @@ html, body, #root {
 }
 
 /* ==========================================================================
-   1. HEADER
+   1. GLOBAL HEADER
    ========================================================================== */
 .gis-header {
   height: 48px;
@@ -104,14 +105,14 @@ html, body, #root {
 
 .brand-title {
   font-size: 13.5px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-primary);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
 }
 
 .brand-divider {
   color: var(--text-muted);
-  opacity: 0.6;
+  opacity: 0.5;
   font-size: 12px;
 }
 
@@ -121,13 +122,13 @@ html, body, #root {
   font-weight: 400;
 }
 
-/* Mode Switcher */
+/* Mode Switcher Segmented Control */
 .header-view-toggle {
   display: inline-flex;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 4px;
   padding: 2px;
-  margin-left: 8px;
+  margin-left: 6px;
   border: 1px solid var(--border-subtle);
 }
 
@@ -151,21 +152,25 @@ html, body, #root {
 }
 
 .view-toggle-btn.active {
-  background: var(--color-active);
+  background: #1e293b;
   color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .view-toggle-btn.active.field {
-  background: var(--color-success);
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
 }
 
 /* State & Status Badges */
 .state-badge {
   display: inline-flex;
   align-items: center;
-  background: rgba(37, 99, 235, 0.15);
+  background: rgba(37, 99, 235, 0.12);
   color: var(--color-active-muted);
-  border: 1px solid rgba(37, 99, 235, 0.35);
+  border: 1px solid rgba(37, 99, 235, 0.3);
   padding: 2px 7px;
   border-radius: 4px;
   font-size: 10.5px;
@@ -178,9 +183,9 @@ html, body, #root {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: rgba(16, 185, 129, 0.12);
+  background: rgba(16, 185, 129, 0.1);
   color: var(--color-success-muted);
-  border: 1px solid rgba(16, 185, 129, 0.28);
+  border: 1px solid rgba(16, 185, 129, 0.25);
   padding: 2px 7px;
   border-radius: 4px;
   font-size: 10.5px;
@@ -196,6 +201,7 @@ html, body, #root {
 
 .status-dot.online {
   background: #10b981;
+  box-shadow: 0 0 5px rgba(16, 185, 129, 0.6);
 }
 
 .status-dot.offline {
@@ -215,9 +221,9 @@ html, body, #root {
 
 /* Guided Demo Trigger */
 .btn-demo {
-  background: rgba(37, 99, 235, 0.18);
+  background: rgba(37, 99, 235, 0.15);
   color: #93c5fd;
-  border: 1px solid rgba(37, 99, 235, 0.45);
+  border: 1px solid rgba(37, 99, 235, 0.4);
   padding: 4px 10px;
   border-radius: 4px;
   font-size: 11.5px;
@@ -230,19 +236,19 @@ html, body, #root {
 }
 
 .btn-demo:hover {
-  background: rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.25);
   color: #ffffff;
   border-color: #60a5fa;
 }
 
 .btn-demo.active {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.18);
   color: #fca5a5;
-  border-color: rgba(239, 68, 68, 0.5);
+  border-color: rgba(239, 68, 68, 0.45);
 }
 
 .btn-demo.active:hover {
-  background: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.3);
   color: #ffffff;
 }
 
@@ -251,7 +257,7 @@ html, body, #root {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 4px;
   padding: 2px 6px;
   border: 1px solid var(--border-subtle);
@@ -272,7 +278,7 @@ html, body, #root {
 }
 
 .lang-select option {
-  background: #0f172a;
+  background: #0d1424;
   color: #f8fafc;
 }
 
@@ -296,7 +302,7 @@ html, body, #root {
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-subtle);
   color: var(--text-primary);
   font-size: 11.5px;
@@ -308,8 +314,8 @@ html, body, #root {
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--border-strong);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: var(--border-medium);
 }
 
 .btn-primary {
@@ -350,10 +356,10 @@ input:focus-visible {
 .gis-nav-stepper {
   display: flex;
   align-items: center;
-  background: var(--bg-app);
+  background: var(--bg-header);
   border-bottom: 1px solid var(--border-subtle);
   padding: 0 16px;
-  gap: 12px;
+  gap: 4px;
   height: 38px;
   min-height: 38px;
   overflow-x: auto;
@@ -400,7 +406,7 @@ input:focus-visible {
   font-size: 10px;
   font-weight: 700;
   font-family: var(--font-mono);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.07);
   color: var(--text-muted);
 }
 
@@ -435,6 +441,13 @@ input:focus-visible {
   color: var(--color-active-muted);
 }
 
+.stepper-separator {
+  color: var(--border-medium);
+  font-size: 10px;
+  margin: 0 2px;
+  user-select: none;
+}
+
 /* Error Banner */
 .gis-error-banner {
   background: rgba(239, 68, 68, 0.12);
@@ -456,14 +469,14 @@ input:focus-visible {
 }
 
 /* ==========================================================================
-   3. THREE-PANE WORKSPACE
+   3. THREE-PANE WORKSPACE (MAP AS HERO)
    ========================================================================== */
 .gis-workspace {
   flex: 1;
   display: grid;
-  grid-template-columns: 270px 1fr 360px;
-  height: calc(100vh - 48px - 38px);
-  height: calc(100dvh - 48px - 38px);
+  grid-template-columns: 260px 1fr 330px;
+  height: calc(100vh - 48px - 38px - 36px);
+  height: calc(100dvh - 48px - 38px - 36px);
   overflow: hidden;
   background: var(--bg-app);
 }
@@ -487,38 +500,27 @@ input:focus-visible {
 }
 
 .panel-content {
-  padding: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .panel-section-title {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
 }
 
 .decision-section-label {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
-}
-
-.directive-plain-block {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-primary);
-  border-left: 3px solid var(--color-active);
-  background: rgba(37, 99, 235, 0.08);
-  padding: 8px 12px;
-  border-radius: 0 4px 4px 0;
-  margin-top: 4px;
 }
 
 /* ==========================================================================
@@ -527,15 +529,15 @@ input:focus-visible {
 .layers-group-container {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .layer-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   padding-top: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .layer-group:first-child {
@@ -544,7 +546,7 @@ input:focus-visible {
 }
 
 .layer-group-title {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--text-muted);
@@ -569,7 +571,7 @@ input:focus-visible {
 }
 
 .layer-row.is-disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
@@ -586,7 +588,7 @@ input:focus-visible {
   height: 13px;
   border: 1px solid var(--border-medium);
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   cursor: pointer;
   display: grid;
   place-content: center;
@@ -609,7 +611,7 @@ input:focus-visible {
 
 .layer-checkbox:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
 .layer-indicator {
@@ -653,14 +655,14 @@ input:focus-visible {
   font-size: 9.5px;
   padding: 1px 5px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-muted);
   flex-shrink: 0;
 }
 
 .layer-row:not(.is-disabled) .layer-count-badge {
   color: #cbd5e1;
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* ==========================================================================
@@ -670,28 +672,28 @@ input:focus-visible {
   position: relative;
   width: 100%;
   height: 100%;
-  background: #0b1120;
+  background: #090d16;
 }
 
 .gis-leaflet-canvas {
   width: 100%;
   height: 100%;
-  background: #0b1120;
+  background: #090d16;
 }
 
 .gis-leaflet-canvas .leaflet-tile-container img {
-  filter: brightness(0.92) contrast(1.05);
+  filter: brightness(0.90) contrast(1.08);
 }
 
 .gis-carto-tooltip {
-  background: rgba(11, 17, 32, 0.95) !important;
+  background: rgba(13, 20, 36, 0.96) !important;
   border: 1px solid var(--border-medium) !important;
   border-radius: 4px !important;
   color: #f8fafc !important;
   font-family: var(--font-sans) !important;
   font-size: 11.5px !important;
   padding: 6px 10px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
 }
 
 .gis-carto-tooltip strong {
@@ -708,10 +710,10 @@ input:focus-visible {
   gap: 2px;
   background: var(--bg-panel);
   border: 1px solid var(--border-medium);
-  border-radius: 5px;
+  border-radius: 4px;
   padding: 2px;
   z-index: 500;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .map-btn {
@@ -751,7 +753,7 @@ input:focus-visible {
 }
 
 .telemetry-caption {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
@@ -782,13 +784,13 @@ input:focus-visible {
 .divider-line {
   height: 1px;
   background: var(--border-subtle);
-  margin: 4px 0;
+  margin: 3px 0;
 }
 
 .bar-track-thin {
   width: 100%;
   height: 4px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 2px;
   overflow: hidden;
   margin-top: 4px;
@@ -804,7 +806,7 @@ input:focus-visible {
 .decision-narrative-flow {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .decision-hero-section {
@@ -814,7 +816,7 @@ input:focus-visible {
 }
 
 .decision-title {
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.3;
@@ -823,7 +825,7 @@ input:focus-visible {
 .hero-number-block {
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.02);
   padding: 12px;
   border-radius: 6px;
   border: 1px solid var(--border-subtle);
@@ -831,14 +833,14 @@ input:focus-visible {
 
 .hero-number-val {
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1.05;
 }
 
 .hero-number-label {
   font-size: 11.5px;
   color: var(--text-secondary);
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .supporting-telemetry-row {
@@ -855,7 +857,7 @@ input:focus-visible {
 }
 
 .editorial-text-block {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-secondary);
   line-height: 1.5;
 }
@@ -863,13 +865,13 @@ input:focus-visible {
 .progression-container {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .progression-bars {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .progression-row {
@@ -889,7 +891,7 @@ input:focus-visible {
 .progression-track {
   width: 100%;
   height: 16px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 3px;
   display: flex;
   overflow: hidden;
@@ -931,14 +933,14 @@ input:focus-visible {
 }
 
 .grid-cell-label {
-  font-size: 10px;
+  font-size: 9.5px;
   color: var(--text-muted);
   text-transform: uppercase;
   font-weight: 600;
 }
 
 .grid-cell-val {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -946,7 +948,7 @@ input:focus-visible {
 /* Next Action Callout Card */
 .next-action-card {
   background: rgba(37, 99, 235, 0.08);
-  border: 1px solid rgba(37, 99, 235, 0.3);
+  border: 1px solid rgba(37, 99, 235, 0.28);
   border-radius: 6px;
   padding: 12px;
   display: flex;
@@ -961,7 +963,7 @@ input:focus-visible {
 }
 
 .next-action-title {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   color: #60a5fa;
   text-transform: uppercase;
@@ -978,7 +980,7 @@ input:focus-visible {
   background: #2563eb;
   color: #ffffff;
   border: none;
-  padding: 6px 12px;
+  padding: 7px 12px;
   border-radius: 4px;
   font-size: 11.5px;
   font-weight: 700;
@@ -988,6 +990,7 @@ input:focus-visible {
   justify-content: center;
   gap: 6px;
   transition: var(--transition);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .next-action-btn:hover:not(:disabled) {
@@ -1126,7 +1129,7 @@ input:focus-visible {
    ========================================================================== */
 @media (max-width: 1440px) {
   .gis-workspace {
-    grid-template-columns: 260px 1fr 340px;
+    grid-template-columns: 250px 1fr 320px;
   }
   .brand-subtitle,
   .brand-divider {
@@ -1136,7 +1139,7 @@ input:focus-visible {
 
 @media (max-width: 1280px) {
   .gis-workspace {
-    grid-template-columns: 240px 1fr 310px;
+    grid-template-columns: 235px 1fr 300px;
   }
   .conn-badge {
     display: none;
@@ -1162,7 +1165,7 @@ input:focus-visible {
 
 @media (max-width: 1024px) {
   .gis-workspace {
-    grid-template-columns: 220px 1fr 280px;
+    grid-template-columns: 215px 1fr 275px;
   }
   .header-actions .btn-demo {
     padding: 3px 6px;
@@ -1174,3 +1177,4 @@ input:focus-visible {
     font-size: 11px;
   }
 }
+

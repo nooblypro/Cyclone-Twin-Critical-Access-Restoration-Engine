@@ -1716,34 +1716,36 @@ export default function CycloneTwinApp() {
           { step: 3, label: "Access", desc: "Ward Cut-Offs" },
           { step: 4, label: "Criticality", desc: "Corridor Ranking" },
           { step: 5, label: "Recovery", desc: "Intervention" },
-        ].map((item) => {
+        ].map((item, idx) => {
           const isCompleted = demoStep > item.step || (item.step === 5 && systemState === "CLEARED");
           const isActive = demoStep === item.step;
           return (
-            <button
-              key={item.step}
-              type="button"
-              className={`stepper-item ${isActive ? "active" : ""} ${isCompleted ? "completed" : ""}`}
-              onClick={() => {
-                if (item.step === 1) handleResetNetwork();
-                else if (item.step === 2) handleApplyFlood();
-                else if (item.step === 3) {
-                  if (systemState === "BASE") handleApplyFlood();
-                  setDemoStep(3);
-                }
-                else if (item.step === 4) handleRankCorridors();
-                else if (item.step === 5) handleClearCorridor();
-              }}
-              aria-current={isActive ? "step" : undefined}
-            >
-              <span className="step-badge">
-                {isCompleted ? "✓" : `0${item.step}`}
-              </span>
-              <div className="step-content">
-                <span className="step-label">{item.label}</span>
-                <span className="step-sublabel">{item.desc}</span>
-              </div>
-            </button>
+            <React.Fragment key={item.step}>
+              {idx > 0 && <span className="stepper-separator">›</span>}
+              <button
+                type="button"
+                className={`stepper-item ${isActive ? "active" : ""} ${isCompleted ? "completed" : ""}`}
+                onClick={() => {
+                  if (item.step === 1) handleResetNetwork();
+                  else if (item.step === 2) handleApplyFlood();
+                  else if (item.step === 3) {
+                    if (systemState === "BASE") handleApplyFlood();
+                    setDemoStep(3);
+                  }
+                  else if (item.step === 4) handleRankCorridors();
+                  else if (item.step === 5) handleClearCorridor();
+                }}
+                aria-current={isActive ? "step" : undefined}
+              >
+                <span className="step-badge">
+                  {isCompleted ? "✓" : `0${item.step}`}
+                </span>
+                <div className="step-content">
+                  <span className="step-label">{item.label}</span>
+                  <span className="step-sublabel">{item.desc}</span>
+                </div>
+              </button>
+            </React.Fragment>
           );
         })}
       </nav>
@@ -2345,13 +2347,13 @@ export default function CycloneTwinApp() {
           <div ref={mapContainerRef} className="gis-leaflet-canvas" />
 
           {/* Map Forecast Legend Overlay (Milestone L6) */}
-          {selectedHorizon !== "NOW" && (
+          {selectedHorizon !== "NOW" ? (
             <div
               style={{
                 position: "absolute",
                 bottom: "16px",
                 left: "16px",
-                background: "rgba(15, 23, 42, 0.92)",
+                background: "rgba(13, 20, 36, 0.94)",
                 border: "1px solid rgba(56, 189, 248, 0.3)",
                 borderRadius: "6px",
                 padding: "8px 12px",
@@ -2386,6 +2388,54 @@ export default function CycloneTwinApp() {
               </div>
               <div style={{ fontSize: "10px", color: "#94a3b8", fontStyle: "italic", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "4px", marginTop: "2px" }}>
                 Vulnerability measures exposure & severity, NOT restoration priority.
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                position: "absolute",
+                bottom: "16px",
+                left: "16px",
+                background: "rgba(13, 20, 36, 0.92)",
+                border: "1px solid var(--border-medium)",
+                borderRadius: "6px",
+                padding: "8px 12px",
+                fontSize: "10.5px",
+                color: "#e2e8f0",
+                zIndex: 400,
+                backdropFilter: "blur(4px)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+                maxWidth: "240px",
+              }}
+            >
+              <div style={{ fontWeight: 700, color: "var(--text-secondary)", fontSize: "9.5px", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                Cartographic Legend
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ width: "14px", height: "3px", background: "#64748b", borderRadius: "1px" }} />
+                <span style={{ color: "var(--text-secondary)" }}>Passable Arterial (56 edges)</span>
+              </div>
+              {hasFloodActive && (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ width: "14px", height: "0", borderTop: "2px dashed #ef4444" }} />
+                  <span style={{ color: "#f87171" }}>Blocked / Inundated Segment</span>
+                </div>
+              )}
+              {hasCorridorActive && (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ width: "14px", height: "4px", background: "#10b981", borderRadius: "1px" }} />
+                  <span style={{ color: "#34d399" }}>Restoration Corridor</span>
+                </div>
+              )}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ color: "#059669", fontWeight: 800, fontSize: "12px", lineHeight: 1 }}>+</span>
+                <span style={{ color: "var(--text-secondary)" }}>Trauma Care Facility (6)</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#3b82f6" }} />
+                <span style={{ color: "var(--text-secondary)" }}>GCC Monitored Ward (10)</span>
               </div>
             </div>
           )}
